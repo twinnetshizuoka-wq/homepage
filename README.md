@@ -50,7 +50,7 @@ git init
 git add .
 git commit -m "Initial commit: twin net website"
 git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/twin-net-website.git
+git remote add origin https://github.com/twinnetshizuoka-wq/homepage.git
 git push -u origin main
 ```
 
@@ -61,7 +61,7 @@ git push -u origin main
 3. **Branch**: `main` / `/ (root)`
 4. **Save**
 
-数分後、`https://YOUR_USERNAME.github.io/twin-net-website/` で公開されます。
+数分後、`https://twinnetshizuoka-wq.github.io/homepage/` で公開されます。
 
 ## 技術スタック
 
