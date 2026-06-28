@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>お問い合わせ | twin net</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="logo">twin net</a>
+      <button class="nav-toggle" aria-label="メニューを開く" aria-expanded="false"><span></span><span></span><span></span></button>
+      <nav class="main-nav">
+        <ul>
+          <li><a href="index.html">ホーム</a></li>
+          <li><a href="consulting.html">コンサルティング</a></li>
+          <li><a href="update-project.html">アップデートプロジェクト</a></li>
+          <li><a href="relationships.html">人間関係</a></li>
+          <li><a href="recording-app.html">自動録音アプリ</a></li>
+          <li><a href="my-skills.html">マイスキル</a></li>
+          <li><a href="my-story.html">マイストーリー</a></li>
+          <li><a href="contact.html" class="active">お問い合わせ</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container"><h1>お問い合わせ</h1></div>
+    </section>
+    <section class="page-content">
+      <div class="container content-narrow">
+        <p>アプリの機能の質問、ご指摘やアドバイスがありましたら、以下のフォームよりお問い合わせください。</p>
+
+        <form class="contact-form" id="contact-form">
+          <div class="form-group">
+            <label for="name">お名前 <span class="required">*</span></label>
+            <input type="text" id="name" name="name" required>
+          </div>
+          <div class="form-group">
+            <label for="email">メールアドレス <span class="required">*</span></label>
+            <input type="email" id="email" name="email" required>
+          </div>
+          <div class="form-group">
+            <label for="subject">件名</label>
+            <select id="subject" name="subject">
+              <option value="consulting">コンサルティングについて</option>
+              <option value="app">アプリについて</option>
+              <option value="recording">自動録音アプリについて</option>
+              <option value="other">その他</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="message">メッセージ <span class="required">*</span></label>
+            <textarea id="message" name="message" rows="6" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">送信する</button>
+        </form>
+
+        <div class="form-success" id="form-success" hidden>
+          <p>お問い合わせありがとうございます。内容を確認のうえ、ご連絡いたします。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <h2>twin net</h2>
+        <h3>事業内容</h3>
+        <ul><li>光回線の紹介販売業務</li><li>アプリ開発業務</li></ul>
+      </div>
+      <div class="footer-links">
+        <a href="privacy.html">プライバシーポリシー</a>
+        <a href="contact.html">お問い合わせ</a>
+      </div>
+    </div>
+    <div class="footer-bottom"><div class="container"><p>&copy; 2026 twin net. All rights reserved.</p></div></div>
+  </footer>
+  <script src="js/main.js"></script>
+</body>
+</html>
