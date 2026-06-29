@@ -334,6 +334,71 @@
   transform: translateY(-1px);
 }
 
+/* Market Services */
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.market-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 2rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+
+.market-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--blue-pale);
+}
+
+.market-card__icon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.market-card__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.market-card__description {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.8;
+  margin-bottom: 1.75rem;
+  flex: 1;
+}
+
+.market-card .btn-outline {
+  align-self: flex-start;
+  padding: 0.65rem 1.5rem;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--blue);
+  border: 2px solid var(--blue);
+  background: transparent;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  line-height: 1.5;
+}
+
+.market-card .btn-outline:hover {
+  background: var(--blue);
+  color: var(--white);
+  transform: translateY(-1px);
+}
+
 /* About blocks */
 .about-block {
   max-width: 680px;
@@ -463,6 +528,10 @@
     grid-template-columns: 1fr;
   }
 
+  .market-grid {
+    grid-template-columns: 1fr;
+  }
+
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
@@ -479,7 +548,8 @@
 }
 
 @media (min-width: 769px) and (max-width: 900px) {
-  .project-grid {
+  .project-grid,
+  .market-grid {
     grid-template-columns: 1fr;
   }
 }
