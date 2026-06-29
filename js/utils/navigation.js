@@ -1,9 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
-  initNavigation();
-  initContactForm();
-});
-
-function initNavigation() {
+export function initNavigation() {
   const toggle = document.querySelector('.nav-toggle');
   const nav = document.querySelector('.main-nav');
 
@@ -21,18 +16,5 @@ function initNavigation() {
       toggle.setAttribute('aria-expanded', 'false');
       document.body.classList.remove('nav-open');
     });
-  });
-}
-
-function initContactForm() {
-  const form = document.getElementById('contact-form');
-  const success = document.getElementById('form-success');
-
-  if (!form) return;
-
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    form.hidden = true;
-    if (success) success.hidden = false;
   });
 }

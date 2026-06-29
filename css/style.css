@@ -119,6 +119,11 @@ a:hover {
   border: none;
   cursor: pointer;
   padding: 0.5rem;
+  z-index: 1001;
+}
+
+body.nav-open {
+  overflow: hidden;
 }
 
 .nav-toggle span {
@@ -667,6 +672,11 @@ a:hover {
     max-height: 0;
     overflow: hidden;
     transition: max-height var(--transition);
+    z-index: 1000;
+  }
+
+  .site-header--transparent .main-nav {
+    top: 70px;
   }
 
   .main-nav.open {
