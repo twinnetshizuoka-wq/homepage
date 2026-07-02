@@ -22,7 +22,7 @@ export function renderHeader({ variant = 'default' } = {}) {
   return `
     <header class="site-header site-header--${variant}">
       <div class="container header-inner">
-        <a href="index.html" class="logo">Twin Net</a>
+        <a href="index.html" class="logo">twin net</a>
         <button class="nav-toggle" aria-label="メニューを開く" aria-expanded="false">
           <span></span><span></span><span></span>
         </button>
@@ -44,7 +44,7 @@ export function renderFooter({ variant = 'default' } = {}) {
           <a href="privacy.html">プライバシーポリシー</a>
           <a href="terms.html">利用規約</a>
         </nav>
-        <p class="footer-copy">&copy; Twin Net</p>
+        <p class="footer-copy">&copy; twin net</p>
       </div>
     </footer>
   `;
