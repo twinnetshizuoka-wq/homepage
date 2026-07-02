@@ -476,6 +476,13 @@
   margin-bottom: 2rem;
 }
 
+.cta-section__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+}
+
 /* Footer - Homepage */
 .site-footer--home {
   background: var(--navy-dark);
