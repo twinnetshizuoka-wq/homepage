@@ -1,6 +1,7 @@
 const NAV_ITEMS = [
   { href: 'index.html', label: 'ホーム', match: (path) => path.endsWith('index.html') || path.endsWith('/') },
   { href: 'index.html#projects', label: 'プロジェクト' },
+  { href: 'blog.html', label: 'ブログ' },
   { href: 'about.html', label: '会社概要' },
   { href: 'contact.html', label: 'お問い合わせ' },
 ];
@@ -40,6 +41,7 @@ export function renderFooter({ variant = 'default' } = {}) {
       <div class="container footer-inner">
         <nav class="footer-nav" aria-label="フッターナビゲーション">
           <a href="about.html">会社概要</a>
+          <a href="blog.html">ブログ</a>
           <a href="contact.html">お問い合わせ</a>
           <a href="privacy.html">プライバシーポリシー</a>
           <a href="terms.html">利用規約</a>

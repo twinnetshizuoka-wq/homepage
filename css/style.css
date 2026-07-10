@@ -451,6 +451,110 @@ body.nav-open {
   top: 0.85rem;
 }
 
+/* Blog */
+.blog-intro {
+  margin-bottom: 2rem;
+  color: var(--color-text-light);
+  text-align: center;
+}
+
+.blog-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.blog-card {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.blog-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.blog-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--color-text-light);
+  margin-bottom: 0.75rem;
+}
+
+.blog-card__category {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.blog-card__title {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.blog-card__title a {
+  color: var(--color-text);
+}
+
+.blog-card__title a:hover {
+  color: var(--color-primary);
+}
+
+.blog-card__excerpt {
+  color: var(--color-text-light);
+  margin-bottom: 1.25rem;
+  line-height: 1.8;
+}
+
+.blog-card__btn {
+  font-size: 0.9rem;
+}
+
+.blog-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--color-text-light);
+  background: var(--color-bg-alt);
+  border-radius: var(--radius);
+  border: 1px dashed var(--color-border);
+}
+
+.blog-article__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  font-size: 0.9rem;
+  color: var(--color-text-light);
+  margin-bottom: 1rem;
+}
+
+.blog-article__category {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.blog-article__title {
+  font-size: clamp(1.5rem, 4vw, 1.85rem);
+  color: var(--color-primary);
+  margin-bottom: 1.5rem;
+  line-height: 1.4;
+}
+
+.blog-article__body p {
+  margin-bottom: 1.25rem;
+  color: var(--color-text-light);
+}
+
+.blog-article__back {
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border);
+}
+
 /* Consulting page */
 .app-card {
   background: var(--color-bg-alt);
