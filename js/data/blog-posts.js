@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'homes-property-source',
+    title: "物件情報の取得先に「HOME'S」が加わりました",
+    date: '2026-07-21',
+    excerpt:
+      "新規入居部屋発見アプリで、HOME'Sからも物件情報を取得できるようになりました。より幅広い物件を確認できます。",
+    href: 'blog/homes-property-source.html',
+    category: 'アプリ更新',
+  },
+  {
     id: 'latte-and-mocha',
     title: '我が家の2匹の猫をご紹介！ラテとモカ',
     date: '2026-07-17',
