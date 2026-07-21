@@ -577,6 +577,15 @@ body.nav-open {
   border: 1px solid var(--color-border);
 }
 
+.blog-article__figure--wide {
+  margin: 1.75rem 0 2rem;
+}
+
+.blog-article__figure--wide img {
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+
 .blog-article__figure figcaption {
   margin-top: 0.5rem;
   text-align: center;

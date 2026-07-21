@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'mocha-work-interrupt',
+    title: 'お邪魔の天才！？仕事中のモカ',
+    date: '2026-07-21',
+    excerpt:
+      '仕事を始めようとすると机に乗ってくるモカ。かわいい邪魔なら許してしまう、猫あるあるの日常です。',
+    href: 'blog/mocha-work-interrupt.html',
+    category: '日常',
+  },
+  {
     id: 'homes-property-source',
     title: "物件情報の取得先に「HOME'S」が加わりました",
     date: '2026-07-21',
