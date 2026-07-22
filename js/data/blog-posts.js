@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'smoker-advantages',
+    title: 'タバコが吸えない私が考える「喫煙者のメリット」',
+    date: '2026-07-23',
+    excerpt:
+      '非喫煙者の視点から、喫煙者のメリットについて考えてみました。気分転換やコミュニケーションなどの側面を紹介します。',
+    href: 'blog/smoker-advantages.html',
+    category: '考察',
+  },
+  {
     id: 'nyanko-no-susume',
     title: 'あなたの理想の猫を見つけようプロジェクト！～ニャンコのススメ～',
     date: '2026-07-22',
