@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'nyanko-no-susume',
+    title: 'あなたの理想の猫を見つけようプロジェクト！～ニャンコのススメ～',
+    date: '2026-07-22',
+    excerpt:
+      '猫種の紹介や、理想の性格からおすすめする診断ページも開発中。自分に合う猫を見つけるプロジェクトを始めます。',
+    href: 'blog/nyanko-no-susume.html',
+    category: 'プロジェクト',
+  },
+  {
     id: 'mocha-work-interrupt',
     title: 'お邪魔の天才！？仕事中のモカ',
     date: '2026-07-21',
