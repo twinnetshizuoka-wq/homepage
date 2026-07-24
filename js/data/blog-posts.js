@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'save-smartphone-fees',
+    title: 'スマホ料金を節約しよう！',
+    date: '2026-07-24',
+    excerpt:
+      '大手キャリアと格安SIMの料金差を踏まえ、スマホ料金の見直しとおすすめの格安SIMを紹介します。',
+    href: 'blog/save-smartphone-fees.html',
+    category: '節約',
+  },
+  {
     id: 'smoker-advantages',
     title: 'タバコが吸えない私が考える「喫煙者のメリット」',
     date: '2026-07-23',
