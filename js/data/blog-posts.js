@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'aeon-mobile-reasons',
+    title: '私がイオンモバイルをおすすめする5つの理由',
+    date: '2026-07-27',
+    excerpt:
+      '店舗の安心感、料金、シェアプラン、回線選択、050かけ放題。イオンモバイルをおすすめする5つの理由を紹介します。',
+    href: 'blog/aeon-mobile-reasons.html',
+    category: '節約',
+  },
+  {
     id: 'save-smartphone-fees',
     title: 'スマホ料金を節約しよう！',
     date: '2026-07-24',
