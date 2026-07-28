@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'neko-seikaku-navi-launch',
+    title: '理想の猫を見つけよう！Webアプリ「ねこ性格ナビ」公開',
+    date: '2026-07-28',
+    excerpt:
+      '猫種・毛色・性別から性格の傾向を調べられるWebアプリ「ねこ性格ナビ」を公開しました。',
+    href: 'blog/neko-seikaku-navi-launch.html',
+    category: 'アプリ更新',
+  },
+  {
     id: 'equal-pay-for-equal-results',
     title: '同一労働同一賃金？それとも「同一成果同一賃金」？',
     date: '2026-07-28',
