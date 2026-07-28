@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'equal-pay-for-equal-results',
+    title: '同一労働同一賃金？それとも「同一成果同一賃金」？',
+    date: '2026-07-28',
+    excerpt:
+      '人事評価の納得感と見える化について考察。仕事の成果や貢献度を可視化するアプリのアイデアも紹介します。',
+    href: 'blog/equal-pay-for-equal-results.html',
+    category: '考察',
+  },
+  {
     id: 'aeon-mobile-reasons',
     title: '私がイオンモバイルをおすすめする5つの理由',
     date: '2026-07-27',
