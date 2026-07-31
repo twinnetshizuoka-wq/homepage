@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'evidence-credibility',
+    title: '今後、証拠の信ぴょう性はどうなる？',
+    date: '2026-07-31',
+    excerpt:
+      'AI時代における写真・動画の証拠の信ぴょう性について考察。本物であることを証明する技術の重要性を考えます。',
+    href: 'blog/evidence-credibility.html',
+    category: '考察',
+  },
+  {
     id: 'neko-seikaku-navi-launch',
     title: '理想の猫を見つけよう！Webアプリ「ねこ性格ナビ」公開',
     date: '2026-07-28',
