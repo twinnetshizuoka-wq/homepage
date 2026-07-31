@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'neko-seikaku-navi-photos',
+    title: '「ねこ性格ナビ」の猫種写真を更新しました！',
+    date: '2026-07-31',
+    excerpt:
+      '猫種選択画面の写真を更新しました。全猫種・全毛色の掲載を目指し、写真提供のご協力も募集しています。',
+    href: 'blog/neko-seikaku-navi-photos.html',
+    category: 'アプリ更新',
+  },
+  {
     id: 'evidence-credibility',
     title: '今後、証拠の信ぴょう性はどうなる？',
     date: '2026-07-31',
