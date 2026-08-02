@@ -1,8 +1,8 @@
 export const projects = [
   {
     id: 'recording',
-    title: 'タイマー録音アプリ',
-    features: ['タイマー録音', '文字起こし', 'ハラスメント対策'],
+    title: 'GPS録音アプリ',
+    features: ['GPS録音', '証拠保全', 'ハラスメント対策'],
     href: 'recording-app.html',
     icon: '🎙️',
   },

@@ -10,7 +10,7 @@
 | コンサルティング | `consulting.html` |
 | アップデートプロジェクト | `update-project.html` |
 | 人間関係にお悩みの方へ | `relationships.html` |
-| 自動録音アプリ | `recording-app.html` |
+| GPS録音アプリ | `recording-app.html` |
 | マイスキル | `my-skills.html` |
 | マイストーリー | `my-story.html` |
 | お問い合わせ | `contact.html` |
