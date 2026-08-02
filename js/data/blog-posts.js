@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'mineo-mysoku',
+    title: '子どものスマホ料金をとにかく安くしたいなら「mineo（マイネオ）」がおすすめ！',
+    date: '2026-08-02',
+    excerpt:
+      'mineoのマイそくスタンダード（最大1.5Mbps）を中心に、子どものスマホ料金を抑えるおすすめポイントを紹介します。',
+    href: 'blog/mineo-mysoku.html',
+    category: '節約',
+  },
+  {
     id: 'neko-seikaku-navi-photos',
     title: '「ねこ性格ナビ」の猫種写真を更新しました！',
     date: '2026-07-31',
