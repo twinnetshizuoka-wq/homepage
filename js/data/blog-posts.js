@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'neko-seikaku-navi-notes',
+    title: '「ねこ性格ナビ」に性格の補足メモを追加しました！',
+    date: '2026-08-03',
+    excerpt:
+      '各猫種の性格を簡単に紹介する補足メモを追加しました。理想の猫探しをより楽しくサポートします。',
+    href: 'blog/neko-seikaku-navi-notes.html',
+    category: 'アプリ更新',
+  },
+  {
     id: 'mineo-mysoku',
     title: '子どものスマホ料金をとにかく安くしたいなら「mineo（マイネオ）」がおすすめ！',
     date: '2026-08-02',
