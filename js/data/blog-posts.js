@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'ai-analog-return',
+    title: 'AI時代だからこそ、アナログに回帰する？',
+    date: '2026-08-04',
+    excerpt:
+      'AI時代における証拠の信ぴょう性と、編集されていないことを証明する仕組み、アナログ回帰の可能性について考察します。',
+    href: 'blog/ai-analog-return.html',
+    category: '考察',
+  },
+  {
     id: 'neko-seikaku-navi-notes',
     title: '「ねこ性格ナビ」に性格の補足メモを追加しました！',
     date: '2026-08-03',
