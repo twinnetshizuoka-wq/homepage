@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'yuseki-point',
+    title: '「有責ポイント」という考え方',
+    date: '2026-08-05',
+    excerpt:
+      'いじめやハラスメントから自分を守るための「有責ポイント」。客観的な証拠を積み重ねる意味と工夫を紹介します。',
+    href: 'blog/yuseki-point.html',
+    category: '考察',
+  },
+  {
     id: 'ai-analog-return',
     title: 'AI時代だからこそ、アナログに回帰する？',
     date: '2026-08-04',
