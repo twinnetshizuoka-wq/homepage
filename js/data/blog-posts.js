@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'autorec-update-resume',
+    title: 'GPS録音アプリ「AutoRec」の更新を再開します！',
+    date: '2026-08-05',
+    excerpt:
+      'GPS録音アプリ「AutoRec」の更新を再開します。Android版の再公開を目指し、将来的にはiPhone版も目標にしています。',
+    href: 'blog/autorec-update-resume.html',
+    category: 'アプリ更新',
+  },
+  {
     id: 'yuseki-point',
     title: '「有責ポイント」という考え方',
     date: '2026-08-05',
