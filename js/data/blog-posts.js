@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'povo-for-calls',
+    title: '電話しか使わないなら「povo」がおすすめ！',
+    date: '2026-08-09',
+    excerpt:
+      '通話をよく利用する方におすすめの格安SIM「povo」。基本料金0円・かけ放題中心の使い方や向いている人を紹介します。',
+    href: 'blog/povo-for-calls.html',
+    category: '節約',
+  },
+  {
     id: 'autorec-update-resume',
     title: 'GPS録音アプリ「AutoRec」の更新を再開します！',
     date: '2026-08-05',
