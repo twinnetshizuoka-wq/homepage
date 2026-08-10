@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'rakuten-mobile',
+    title: '普通におすすめ！楽天モバイル',
+    date: '2026-08-11',
+    excerpt:
+      '楽天モバイルをおすすめする理由。ギガ使い放題の料金、テザリング活用、気になる点まで紹介します。',
+    href: 'blog/rakuten-mobile.html',
+    category: '節約',
+  },
+  {
     id: 'povo-for-calls',
     title: '電話しか使わないなら「povo」がおすすめ！',
     date: '2026-08-09',
