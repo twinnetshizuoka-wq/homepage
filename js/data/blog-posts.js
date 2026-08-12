@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'autorec-internal-test',
+    title: 'GPS録音アプリ「AutoRec」内部テストを始めました！',
+    date: '2026-08-12',
+    excerpt:
+      'GPS録音アプリ「AutoRec」の内部テストを開始しました。Androidユーザーのご協力を募集しています。',
+    href: 'blog/autorec-internal-test.html',
+    category: 'アプリ更新',
+  },
+  {
     id: 'rakuten-mobile',
     title: '普通におすすめ！楽天モバイル',
     date: '2026-08-11',
