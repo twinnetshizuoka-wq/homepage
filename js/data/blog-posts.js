@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'first-evidence',
+    title: 'まずは「証拠」',
+    date: '2026-08-15',
+    excerpt:
+      '探偵経験から考える証拠の大切さ。信頼関係を超えて事実を伝えるために、まずは証拠を残すことが自分を守る第一歩です。',
+    href: 'blog/first-evidence.html',
+    category: '考察',
+  },
+  {
     id: 'autorec-internal-test',
     title: 'GPS録音アプリ「AutoRec」内部テストを始めました！',
     date: '2026-08-12',
