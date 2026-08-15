@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'secret-recording',
+    title: '「秘密録音」は基本的に違法ではありません',
+    date: '2026-08-16',
+    excerpt:
+      '自分が当事者として参加している会話の秘密録音は原則として違法ではありません。正しい知識と注意点を紹介します。',
+    href: 'blog/secret-recording.html',
+    category: '考察',
+  },
+  {
     id: 'first-evidence',
     title: 'まずは「証拠」',
     date: '2026-08-15',
