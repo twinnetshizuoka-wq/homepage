@@ -739,6 +739,35 @@ body.nav-open {
   margin: 0;
 }
 
+/* How-to steps */
+.howto-steps {
+  list-style: none;
+  margin: 0 0 2rem;
+  padding: 0;
+  counter-reset: none;
+}
+
+.howto-steps > li {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.howto-steps > li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.howto-steps h3 {
+  font-size: 1.1rem;
+  color: var(--color-primary);
+  margin: 0 0 0.5rem;
+}
+
+.howto-steps p {
+  margin-bottom: 0;
+}
+
 /* Legal */
 .legal-content h2 {
   font-size: 1.15rem;
