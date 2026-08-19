@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'autorec-map-fix',
+    title: 'AutoRecのMap表示を改善しました！',
+    date: '2026-08-19',
+    excerpt:
+      'GPS録音アプリ「AutoRec」のMap画面を改善。通知バーと重なって押せなかったMapボタンの位置を修正しました。',
+    href: 'blog/autorec-map-fix.html',
+    category: 'アプリ更新',
+  },
+  {
     id: 'secret-recording',
     title: '「秘密録音」は基本的に違法ではありません',
     date: '2026-08-16',
