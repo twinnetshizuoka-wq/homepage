@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'pet-benefits',
+    title: 'ペットを飼うメリット',
+    date: '2026-08-20',
+    excerpt:
+      'ペットを飼うメリットについて。さみしさの軽減、生活リズム、会話の増加、命を大切にする意識まで紹介します。',
+    href: 'blog/pet-benefits.html',
+    category: '日常',
+  },
+  {
     id: 'autorec-map-fix',
     title: 'AutoRecのMap表示を改善しました！',
     date: '2026-08-19',
