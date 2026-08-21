@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'reverse-power-harassment',
+    title: '逆パワハラにも録音は必要？',
+    date: '2026-08-21',
+    excerpt:
+      '逆パワハラと録音の必要性について。上司も部下も、客観的な記録が自分を守る手段になるという考え方を紹介します。',
+    href: 'blog/reverse-power-harassment.html',
+    category: '考察',
+  },
+  {
     id: 'pet-benefits',
     title: 'ペットを飼うメリット',
     date: '2026-08-20',
