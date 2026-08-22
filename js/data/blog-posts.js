@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'sales-recording',
+    title: '営業職も録音をおすすめします！',
+    date: '2026-08-22',
+    excerpt:
+      '営業職におすすめの商談録音。トラブル防止だけでなく、自分の言葉に責任を持ち、話し方を改善するメリットを紹介します。',
+    href: 'blog/sales-recording.html',
+    category: '考察',
+  },
+  {
     id: 'reverse-power-harassment',
     title: '逆パワハラにも録音は必要？',
     date: '2026-08-21',
