@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'room-discovery-intro',
+    title: '新規入居部屋発見アプリを紹介します！',
+    date: '2026-08-24',
+    excerpt:
+      '開発中の新規入居部屋発見アプリを紹介。掲載終了物件の比較で新規入居の可能性が高い物件を探し、テスターも募集しています。',
+    href: 'blog/room-discovery-intro.html',
+    category: 'プロジェクト',
+  },
+  {
     id: 'sales-recording',
     title: '営業職も録音をおすすめします！',
     date: '2026-08-22',
