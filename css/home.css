@@ -334,6 +334,52 @@
   transform: translateY(-1px);
 }
 
+/* Home Blog */
+.home-blog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.home-blog-grid .blog-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+
+.home-blog-grid .blog-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--blue-pale);
+}
+
+.home-blog-grid .blog-card__title {
+  font-size: 1.05rem;
+}
+
+.home-blog-grid .blog-card__excerpt {
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.section__actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 2.75rem;
+}
+
+.section__actions .btn-new--primary {
+  min-width: 240px;
+}
+
 /* Market Services */
 .market-grid {
   display: grid;
@@ -535,6 +581,10 @@
     grid-template-columns: 1fr;
   }
 
+  .home-blog-grid {
+    grid-template-columns: 1fr;
+  }
+
   .market-grid {
     grid-template-columns: 1fr;
   }
@@ -556,6 +606,7 @@
 
 @media (min-width: 769px) and (max-width: 900px) {
   .project-grid,
+  .home-blog-grid,
   .market-grid {
     grid-template-columns: 1fr;
   }
