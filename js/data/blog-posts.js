@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'reboot-importance',
+    title: '再起動の重要性！',
+    date: '2026-08-24',
+    excerpt:
+      'Webカメラが映らなくなったトラブル。モデム再起動だけで復旧した実例から、インターネット機器の再起動の重要性を紹介します。',
+    href: 'blog/reboot-importance.html',
+    category: '日常',
+  },
+  {
     id: 'room-discovery-intro',
     title: '新規入居部屋発見アプリを紹介します！',
     date: '2026-08-24',
