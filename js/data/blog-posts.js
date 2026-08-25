@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'cherish-yourself',
+    title: '自分を大切に……',
+    date: '2026-08-25',
+    excerpt:
+      '苦しい道のりを乗り越えた自分をねぎらうこと。自分を一番大切にできるのは自分自身だという考えを紹介します。',
+    href: 'blog/cherish-yourself.html',
+    category: '考察',
+  },
+  {
     id: 'reboot-importance',
     title: '再起動の重要性！',
     date: '2026-08-24',
