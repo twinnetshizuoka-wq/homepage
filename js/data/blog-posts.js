@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'discrimination-and-distinction',
+    title: '差別と区別は難しい',
+    date: '2026-08-27',
+    excerpt:
+      '差別と区別の違い、個人の幸福と社会全体の幸福について。正解が分からないからこそ考えてみたい問題を紹介します。',
+    href: 'blog/discrimination-and-distinction.html',
+    category: '考察',
+  },
+  {
     id: 'cherish-yourself',
     title: '自分を大切に……',
     date: '2026-08-25',
