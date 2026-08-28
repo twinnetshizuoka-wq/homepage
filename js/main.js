@@ -1,6 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
   initNavigation();
   initContactForm();
+  import('./utils/paw-click.js')
+    .then((module) => module.initPawClick())
+    .catch(() => {});
 });
 
 function initNavigation() {

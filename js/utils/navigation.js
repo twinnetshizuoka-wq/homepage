@@ -1,4 +1,8 @@
+import { initPawClick } from './paw-click.js';
+
 export function initNavigation() {
+  initPawClick();
+
   const toggle = document.querySelector('.nav-toggle');
   const nav = document.querySelector('.main-nav');
 
