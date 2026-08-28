@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'go-vote',
+    title: '投票は行きましょう！',
+    date: '2026-08-28',
+    excerpt:
+      '投票したい候補者がいなくても選挙に行く意味について。自分の考えに近い政党や候補者を選び、意思表示としての投票を考えます。',
+    href: 'blog/go-vote.html',
+    category: '考察',
+  },
+  {
     id: 'discrimination-and-distinction',
     title: '差別と区別は難しい',
     date: '2026-08-27',
