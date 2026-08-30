@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'nta-tax-evasion',
+    title: '国税局の職員が所得税を脱税！？',
+    date: '2026-08-30',
+    excerpt:
+      '国税局職員の所得税脱税ニュースを見て感じたこと。税金への複雑な気持ちと、それでも納税することについて。',
+    href: 'blog/nta-tax-evasion.html',
+    category: '考察',
+  },
+  {
     id: 'go-vote',
     title: '投票は行きましょう！',
     date: '2026-08-28',
