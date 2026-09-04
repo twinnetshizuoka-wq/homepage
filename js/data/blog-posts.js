@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'tax-vote',
+    title: '税金が高いと思ったら投票しよう！',
+    date: '2026-09-04',
+    excerpt:
+      '税金が高いと感じたら、愚痴だけで終わらせず投票で意思表示を。減税を掲げる政党の政策を調べて一票を投じる考え方を紹介します。',
+    href: 'blog/tax-vote.html',
+    category: '考察',
+  },
+  {
     id: 'nta-tax-evasion',
     title: '国税局の職員が所得税を脱税！？',
     date: '2026-08-30',
