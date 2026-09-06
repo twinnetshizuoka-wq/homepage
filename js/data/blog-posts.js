@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'background-check',
+    title: '気になる人の素行調査',
+    date: '2026-09-06',
+    excerpt:
+      '気になる異性ができたとき、交際前の素行調査という選択肢について。疑うためではなく、確認するために調べる考え方を紹介します。',
+    href: 'blog/background-check.html',
+    category: '考察',
+  },
+  {
     id: 'tax-vote',
     title: '税金が高いと思ったら投票しよう！',
     date: '2026-09-04',
