@@ -14,6 +14,13 @@ export const projects = [
     icon: '🏠',
   },
   {
+    id: 'google-map-pin',
+    title: 'GoogleMapピン刺しアプリ',
+    features: ['GoogleMap連携', 'ピン刺し', '位置情報の可視化'],
+    href: 'google-map-pin.html',
+    icon: '📍',
+  },
+  {
     id: 'sns-network',
     title: 'SNS相関図アプリ',
     features: ['SNS解析', 'ネットワーク可視化', 'CSV生成'],
@@ -37,7 +44,7 @@ export const projects = [
 ];
 
 export const stats = [
-  { value: '5件', label: '開発中プロジェクト' },
+  { value: '6件', label: '開発中プロジェクト' },
   { value: '継続中', label: 'アップデート予定' },
   { value: '24時間受付', label: 'お問い合わせ' },
 ];
