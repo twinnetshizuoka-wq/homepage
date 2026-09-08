@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'background-check-what',
+    title: '素行調査では何を調べるの？',
+    date: '2026-09-08',
+    excerpt:
+      '素行調査で調べられる内容を紹介。基本情報、婚姻歴、仕事・経済状況、日常の素行など、適法な範囲での確認ポイントをまとめます。',
+    href: 'blog/background-check-what.html',
+    category: '考察',
+  },
+  {
     id: 'background-check',
     title: '気になる人の素行調査',
     date: '2026-09-06',
