@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'power-harassment-boss-check',
+    title: 'パワハラ上司の素行調査',
+    date: '2026-09-09',
+    excerpt:
+      'パワハラ上司の素行調査について。合法・違法の境界、個人での尾行のリスク、まずは録音などで自分を守る方法を紹介します。',
+    href: 'blog/power-harassment-boss-check.html',
+    category: '考察',
+  },
+  {
     id: 'background-check-what',
     title: '素行調査では何を調べるの？',
     date: '2026-09-08',
