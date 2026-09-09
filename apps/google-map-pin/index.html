@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>google maps ピン刺しアプリ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">📍</span>
+          <h1>google maps ピン刺しアプリ</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="account-badge" id="account-badge" hidden></span>
+          <button type="button" class="btn ghost" id="google-signin">
+            Googleアカウントを登録
+          </button>
+          <button type="button" class="btn ghost" id="google-signout" hidden>
+            登録解除
+          </button>
+          <button type="button" class="linkish" id="open-settings">設定</button>
+          <a class="linkish" href="../../google-map-pin.html">twin netへ戻る</a>
+        </div>
+      </header>
+
+      <section class="home" id="home-view">
+        <p class="home-lead">
+          管理中の Excel から住所や物件名をコピーして貼り付け、Google マイマップへピンを登録します。
+        </p>
+        <div class="home-actions">
+          <button type="button" class="btn huge primary" id="new-register">
+            新規登録
+          </button>
+          <button type="button" class="btn huge secondary" id="open-mymap">
+            ピンのグループを開く
+          </button>
+          <button type="button" class="btn huge ghost" id="home-map-register">
+            地図から登録
+          </button>
+          <button type="button" class="btn huge ghost" id="open-google-mymaps">
+            GoogleMyMapsを開く
+          </button>
+        </div>
+        <p class="home-note">
+          マイマップは各レイヤ最大 2000件までです。超える場合はレイヤを分けてください。
+        </p>
+        <p class="home-note">
+          このページは Chrome または Edge での利用を推奨します。
+        </p>
+        <p class="home-note" id="signed-in-label"></p>
+      </section>
+
+      <section class="workspace" id="workspace-view" hidden>
+        <div class="sheet-pane">
+          <div class="register-bar">
+            <label class="map-name-field">
+              ピンのグループ名
+              <input
+                id="map-name"
+                type="text"
+                placeholder="例：2026年 関東物件"
+                autocomplete="off"
+              />
+            </label>
+            <fieldset class="location-mode">
+              <legend>位置情報に使う列</legend>
+              <label>
+                <input type="radio" name="location-mode" value="address" />
+                住所のみ
+              </label>
+              <label>
+                <input type="radio" name="location-mode" value="address-and-name" checked />
+                住所と物件名
+              </label>
+            </fieldset>
+            <button type="button" class="btn primary" id="register-google">
+              ピンを刺す
+            </button>
+            <button type="button" class="btn secondary" id="open-map-register">
+              地図から登録
+            </button>
+            <button type="button" class="btn ghost" id="back-home">
+              トップへ
+            </button>
+          </div>
+
+          <p class="notice" id="layer-notice">
+            <strong>注意：</strong>Google マイマップは <strong>1レイヤあたり最大 2000件</strong> までです。2000件を超える場合は、データを分けて別レイヤ（または別マップ）へ登録してください。
+          </p>
+          <p class="notice">
+            <strong>ピンの位置について：</strong>登録時に「住所のみ」か「住所と物件名」を選べます。物件名があれば、<strong>県・市・字</strong>だけでもある程度ピンが刺さります。番地までなくても、位置情報に物件名を含めて登録してください。
+          </p>
+
+          <div class="sheet-toolbar">
+            <button type="button" class="btn compact" id="add-row">行を追加</button>
+            <button type="button" class="btn compact" id="add-samples">
+              サンプルを追加
+            </button>
+            <button type="button" class="btn compact" id="export-csv">
+              CSV保存
+            </button>
+            <label class="import-btn compact">
+              CSV読込
+              <input id="import-csv" type="file" accept=".csv,text/csv" hidden />
+            </label>
+            <button type="button" class="btn compact" id="toolbar-save-mymap">
+              マイマップ用ファイルを保存
+            </button>
+            <span class="count" id="row-count">0件</span>
+          </div>
+
+          <div class="sheet-wrap">
+            <table class="sheet">
+              <thead>
+                <tr>
+                  <th class="col-num">#</th>
+                  <th>住所</th>
+                  <th>物件名</th>
+                  <th>自社担当者</th>
+                  <th>取引担当者</th>
+                  <th>備考</th>
+                  <th class="col-action"></th>
+                </tr>
+              </thead>
+              <tbody id="sheet-body"></tbody>
+            </table>
+          </div>
+          <p class="fine">
+            Excel のセル範囲をコピーし、表の先頭セルに貼り付けると複数行をまとめて追加できます。行番号を押すと、そのピンに地図が寄ります。
+          </p>
+        </div>
+
+        <div class="map-pane" id="map-pane" hidden>
+          <div class="map-toolbar">
+            <button type="button" class="btn compact" id="fit-pins">
+              すべてのピンを表示
+            </button>
+            <button type="button" class="btn compact" id="expand-map">
+              全体表示
+            </button>
+            <button type="button" class="btn compact" id="shrink-map" hidden>
+              全体画面解除
+            </button>
+            <button type="button" class="btn compact" id="close-map">
+              地図を閉じる
+            </button>
+          </div>
+          <div id="map" role="application" aria-label="ピンを表示する地図"></div>
+        </div>
+      </section>
+      <p class="yahoo-credit">
+        <span style="margin:15px"><a href="https://developer.yahoo.co.jp/sitemap/">Webサービス by Yahoo! JAPAN</a></span>
+      </p>
+    </div>
+
+    <dialog id="groups-dialog">
+      <div class="dialog-card">
+        <h2>ピンのグループを開く</h2>
+        <p class="fine">保存したグループ名を選ぶと、登録データとピンを開けます。</p>
+        <ul class="group-list" id="groups-list"></ul>
+        <p class="empty" id="groups-empty">保存されたグループはまだありません。</p>
+        <div class="form-actions">
+          <button type="button" class="btn ghost" id="close-groups">閉じる</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="quota-dialog">
+      <div class="dialog-card">
+        <h2>本日の利用は終了しました</h2>
+        <p>
+          本日の利用は終了しました。明日以降に再度ご利用ください。
+        </p>
+        <p class="fine">
+          無料で位置検索を続けるため、1日の回数に上限を設けています。日付が変わると、また使えます。
+        </p>
+        <div class="form-actions">
+          <button type="button" class="btn primary" id="close-quota">閉じる</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="result-dialog">
+      <div class="dialog-card">
+        <h2>地図ができました</h2>
+        <p id="result-message">ピンを刺しました。</p>
+        <p class="fine">
+          右側（または下）の地図にピンが表示されます。Google マイマップで「新しい地図を作成」をする必要はありません。
+        </p>
+        <div class="form-actions">
+          <button type="button" class="btn primary" id="close-result">地図を見る</button>
+          <button type="button" class="btn ghost" id="save-mymap-file">
+            マイマップ用ファイルを保存
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="ad-dialog" class="ad-dialog">
+      <div class="dialog-card ad-card">
+        <p class="ad-kicker">スポンサー広告</p>
+        <div class="ad-frame" id="ad-frame"></div>
+        <p class="ad-caption">操作の前に広告が表示されます。</p>
+        <div class="form-actions">
+          <button type="button" class="btn primary" id="ad-continue" disabled>
+            あと 3 秒
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="account-dialog">
+      <div class="dialog-card">
+        <h2>Googleアカウントを登録</h2>
+        <p>
+          マイマップを開く前に、使う Google アカウントを登録できます。登録しておくと「MyMapを開く」でそのアカウントのマイマップに入れます。
+        </p>
+        <p class="account-status" id="account-status">未登録です。</p>
+        <label>
+          Googleアカウント（メールアドレス）
+          <input
+            id="account-email"
+            type="email"
+            autocomplete="username"
+            placeholder="you@gmail.com"
+          />
+        </label>
+        <div class="form-actions">
+          <button type="button" class="btn primary" id="save-account">
+            このアカウントを登録
+          </button>
+          <button type="button" class="btn secondary" id="confirm-account">
+            Googleで確認して登録
+          </button>
+          <button type="button" class="btn ghost" id="close-account">閉じる</button>
+        </div>
+        <p class="fine">
+          メールアドレスだけでもマイマップをそのアカウントで開けます。ドライブへ書き込む場合は「Googleで確認して登録」を押してください。
+        </p>
+      </div>
+    </dialog>
+
+    <dialog id="settings-dialog">
+      <form method="dialog" class="dialog-card" id="settings-form">
+        <h2>設定</h2>
+        <label>
+          登録済み Googleアカウント
+          <input
+            id="settings-account-email"
+            type="email"
+            autocomplete="username"
+            placeholder="you@gmail.com"
+          />
+        </label>
+        <label>
+          Google OAuth クライアントID
+          <input
+            id="oauth-client-id"
+            type="text"
+            autocomplete="off"
+            placeholder="123456789-xxxx.apps.googleusercontent.com"
+          />
+        </label>
+        <label>
+          Google Maps API キー（住所検索用・任意）
+          <input
+            id="api-key-input"
+            type="password"
+            autocomplete="off"
+            placeholder="AIza..."
+          />
+        </label>
+        <label>
+          マイマップURL（任意）
+          <input
+            id="mymap-url"
+            type="url"
+            autocomplete="off"
+            placeholder="https://www.google.com/maps/d/"
+          />
+        </label>
+        <p class="fine">
+          ログイン後、「googleマップへ登録」で Google ドライブにシートと KML を書き込みます。
+          マイマップには公式の直接書き込み API がないため、初回はマイマップ側でインポートが必要です。
+        </p>
+        <div class="form-actions">
+          <button type="submit" class="btn primary" value="save">保存</button>
+          <button type="submit" class="btn ghost" value="close">閉じる</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="app.js"></script>
+  </body>
+</html>
