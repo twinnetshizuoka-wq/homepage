@@ -59,6 +59,21 @@ a {
   border-bottom: 1px solid var(--line);
 }
 
+.quota-status {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: baseline;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--forest);
+}
+
+.quota-status.is-blocked {
+  color: var(--danger);
+}
+
 .brand {
   display: flex;
   gap: 10px;
@@ -445,7 +460,14 @@ body.map-fullscreen {
 }
 
 .sheet tbody tr.is-focused {
-  background: #e8f3ec;
+  background: #d5efe0;
+  outline: 2px solid var(--leaf);
+  outline-offset: -2px;
+}
+
+.sheet tbody tr.is-focused .col-num {
+  background: var(--leaf);
+  color: #fff;
 }
 
 .group-list {

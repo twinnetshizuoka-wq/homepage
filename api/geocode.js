@@ -48,9 +48,27 @@ export default async function handler(req, res) {
     return;
   }
 
-  const quota = await consumeQuota(1);
+  let quota;
+  try {
+    quota = await consumeQuota(1);
+  } catch {
+    quota = {
+      date: new Date().toISOString().slice(0, 10),
+      count: 0,
+      limit: 40000,
+      remaining: 40000,
+      blocked: false,
+      consumed: 1,
+    };
+  }
   if (!quota.consumed) {
-    res.status(429).json({ blocked: true, remaining: 0 });
+    res.status(429).json({
+      blocked: true,
+      remaining: 0,
+      count: quota.count,
+      limit: quota.limit,
+      quota,
+    });
     return;
   }
 
@@ -69,15 +87,18 @@ export default async function handler(req, res) {
       },
     });
     if (response.status === 204) {
-      res.status(200).json({ lat: null, lng: null, formatted: "" });
+      res.status(200).json({ lat: null, lng: null, formatted: "", quota });
       return;
     }
     if (!response.ok) {
-      res.status(502).json({ error: "yahoo geocode failed" });
+      res.status(502).json({ error: "yahoo geocode failed", quota });
       return;
     }
     const data = await response.json();
-    res.status(200).json(parseYahooFeature(data) || { lat: null, lng: null, formatted: "" });
+    res.status(200).json({
+      ...(parseYahooFeature(data) || { lat: null, lng: null, formatted: "" }),
+      quota,
+    });
   } catch {
     res.status(502).json({ error: "yahoo geocode failed" });
   }

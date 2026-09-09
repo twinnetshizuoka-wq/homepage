@@ -37,6 +37,10 @@
           <button type="button" class="linkish" id="open-settings">設定</button>
           <a class="linkish" href="../../google-map-pin.html">twin netへ戻る</a>
         </div>
+        <div class="quota-status" id="quota-status" role="status">
+          <span id="quota-count">本日のピン上限 0/40000本</span>
+          <span id="quota-limit-note" hidden>翌日0:00以降にピンを刺して下さい。</span>
+        </div>
       </header>
 
       <section class="home" id="home-view">
@@ -58,7 +62,7 @@
           </button>
         </div>
         <p class="home-note">
-          マイマップは各レイヤ最大 2000件までです。超える場合はレイヤを分けてください。
+          ピンのグループは最大 1000件までです。超える場合はグループを分けてください。
         </p>
         <p class="home-note">
           このページは Chrome または Edge での利用を推奨します。
@@ -95,13 +99,16 @@
             <button type="button" class="btn secondary" id="open-map-register">
               地図から登録
             </button>
+            <button type="button" class="btn secondary" id="show-map" hidden>
+              地図を表示する
+            </button>
             <button type="button" class="btn ghost" id="back-home">
               トップへ
             </button>
           </div>
 
           <p class="notice" id="layer-notice">
-            <strong>注意：</strong>Google マイマップは <strong>1レイヤあたり最大 2000件</strong> までです。2000件を超える場合は、データを分けて別レイヤ（または別マップ）へ登録してください。
+            <strong>注意：</strong>ピンのグループは <strong>1グループあたり最大 1000件</strong> までです。1000件を超える場合は、データを分けて別グループへ登録してください。
           </p>
           <p class="notice">
             <strong>ピンの位置について：</strong>登録時に「住所のみ」か「住所と物件名」を選べます。物件名があれば、<strong>県・市・字</strong>だけでもある程度ピンが刺さります。番地までなくても、位置情報に物件名を含めて登録してください。
@@ -121,6 +128,9 @@
             </label>
             <button type="button" class="btn compact" id="toolbar-save-mymap">
               マイマップ用ファイルを保存
+            </button>
+            <button type="button" class="btn compact" id="paste-clipboard">
+              クリップボードから貼り付け
             </button>
             <span class="count" id="row-count">0件</span>
           </div>
@@ -142,7 +152,7 @@
             </table>
           </div>
           <p class="fine">
-            Excel のセル範囲をコピーし、表の先頭セルに貼り付けると複数行をまとめて追加できます。行番号を押すと、そのピンに地図が寄ります。
+            Excel のセル範囲をコピーし、表の先頭セルに貼り付けると複数行をまとめて追加できます。スマホでは「クリップボードから貼り付け」を使うか、セルへ貼り付けてください。行番号を押すと、そのピンに地図が寄ります。
           </p>
         </div>
 
@@ -183,10 +193,8 @@
 
     <dialog id="quota-dialog">
       <div class="dialog-card">
-        <h2>本日の利用は終了しました</h2>
-        <p>
-          本日の利用は終了しました。明日以降に再度ご利用ください。
-        </p>
+        <h2>本日のピン上限に達しました</h2>
+        <p>翌日0:00以降にピンを刺して下さい。</p>
         <p class="fine">
           無料で位置検索を続けるため、1日の回数に上限を設けています。日付が変わると、また使えます。
         </p>
@@ -229,7 +237,7 @@
       <div class="dialog-card">
         <h2>Googleアカウントを登録</h2>
         <p>
-          マイマップを開く前に、使う Google アカウントを登録できます。登録しておくと「MyMapを開く」でそのアカウントのマイマップに入れます。
+          「Googleで確認して登録」をすると、ピンのグループを Google ドライブに保存し、PC とスマホで同じデータを使えます。
         </p>
         <p class="account-status" id="account-status">未登録です。</p>
         <label>
@@ -251,7 +259,7 @@
           <button type="button" class="btn ghost" id="close-account">閉じる</button>
         </div>
         <p class="fine">
-          メールアドレスだけでもマイマップをそのアカウントで開けます。ドライブへ書き込む場合は「Googleで確認して登録」を押してください。
+          「Googleで確認して登録」をすると、このアプリのデータが Google ドライブに保存され、同じアカウントの別の端末でも開けます。
         </p>
       </div>
     </dialog>

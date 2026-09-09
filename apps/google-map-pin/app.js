@@ -8,7 +8,9 @@ const DEFAULT_OAUTH_CLIENT_ID =
 const MYMAP_URL_KEY = "mymap-pin-app:mymap-url";
 const ACCOUNT_KEY = "mymap-pin-app:google-account";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email";
-const LAYER_LIMIT = 2000;
+const DRIVE_DATA_NAME = "mymap-pin-app-data.json";
+const DRIVE_DATA_ID_KEY = "mymap-pin-app:drive-data-id";
+const LAYER_LIMIT = 1000;
 const SHEET_FIELDS = ["address", "propertyName", "companyRep", "clientRep", "note"];
 const ADS = [
   { title: "物件まわりの業務をもっと早く", body: "住所・担当者・備考を表でまとめて、地図にピンを残せます。" },
@@ -90,6 +92,11 @@ const els = {
   closeResult: document.getElementById("close-result"),
   quotaDialog: document.getElementById("quota-dialog"),
   closeQuota: document.getElementById("close-quota"),
+  quotaStatus: document.getElementById("quota-status"),
+  quotaCount: document.getElementById("quota-count"),
+  quotaLimitNote: document.getElementById("quota-limit-note"),
+  pasteClipboard: document.getElementById("paste-clipboard"),
+  showMapButton: document.getElementById("show-map"),
   saveMymapFile: document.getElementById("save-mymap-file"),
 };
 
@@ -267,6 +274,103 @@ function saveState() {
     }
   }
   persistGroups();
+  scheduleDriveSync();
+}
+
+let driveSyncTimer = 0;
+
+function scheduleDriveSync() {
+  if (!state.accessToken) return;
+  window.clearTimeout(driveSyncTimer);
+  driveSyncTimer = window.setTimeout(() => {
+    uploadDriveGroups().catch(() => {});
+  }, 1200);
+}
+
+function mergeGroups(localGroups, cloudGroups) {
+  const map = new Map();
+  [...(localGroups || []), ...(cloudGroups || [])].forEach((group) => {
+    if (!group?.id) return;
+    const prev = map.get(group.id);
+    if (!prev || (Number(group.updatedAt) || 0) >= (Number(prev.updatedAt) || 0)) {
+      map.set(group.id, group);
+    }
+  });
+  return [...map.values()].sort((a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0));
+}
+
+async function findDriveDataFile() {
+  const existing = localStorage.getItem(DRIVE_DATA_ID_KEY);
+  if (existing) return existing;
+  if (!state.accessToken) return "";
+  const query = encodeURIComponent("name = 'mymap-pin-app-data.json' and trashed = false");
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${query}&spaces=drive&fields=files(id,name)`,
+    { headers: { Authorization: `Bearer ${state.accessToken}` } }
+  );
+  const data = await response.json().catch(() => ({}));
+  const id = data.files?.[0]?.id || "";
+  if (id) localStorage.setItem(DRIVE_DATA_ID_KEY, id);
+  return id;
+}
+
+async function downloadDriveGroups() {
+  const id = await findDriveDataFile();
+  if (!id) return null;
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, {
+    headers: { Authorization: `Bearer ${state.accessToken}` },
+  });
+  if (!response.ok) return null;
+  return response.json().catch(() => null);
+}
+
+async function uploadDriveGroups() {
+  if (!state.accessToken) return;
+  const payload = JSON.stringify({
+    currentGroupId: state.currentGroupId,
+    groups: state.groups,
+    updatedAt: Date.now(),
+  });
+  const metadata = { name: DRIVE_DATA_NAME, mimeType: "application/json" };
+  const form = new FormData();
+  form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+  form.append("file", new Blob([payload], { type: "application/json" }));
+  const existing = await findDriveDataFile();
+  const endpoint = existing
+    ? `https://www.googleapis.com/upload/drive/v3/files/${existing}?uploadType=multipart`
+    : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+  const response = await fetch(endpoint, {
+    method: existing ? "PATCH" : "POST",
+    headers: { Authorization: `Bearer ${state.accessToken}` },
+    body: form,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (data.id) localStorage.setItem(DRIVE_DATA_ID_KEY, data.id);
+}
+
+async function syncFromDrive() {
+  if (!state.accessToken) return;
+  toast("Googleドライブと同期しています…");
+  const cloud = await downloadDriveGroups();
+  if (!cloud?.groups) {
+    await uploadDriveGroups();
+    toast("この端末のデータを Googleドライブに保存しました");
+    return;
+  }
+  state.groups = mergeGroups(state.groups, cloud.groups);
+  if (cloud.currentGroupId && state.groups.some((group) => group.id === cloud.currentGroupId)) {
+    state.currentGroupId = cloud.currentGroupId;
+  } else if (!state.groups.some((group) => group.id === state.currentGroupId)) {
+    state.currentGroupId = state.groups[0]?.id || null;
+  }
+  applyCurrentGroup();
+  persistGroups();
+  if (els.mapName) els.mapName.value = state.mapName;
+  setLocationMode(state.locationMode);
+  renderSheet();
+  syncMarkers();
+  await uploadDriveGroups();
+  toast("PCとスマホで同じデータを使えるよう同期しました");
 }
 
 function startNewGroup() {
@@ -446,6 +550,7 @@ function showHome() {
   hideMap();
   els.home.hidden = false;
   els.workspace.hidden = true;
+  refreshQuotaDisplay();
 }
 
 function showWorkspace() {
@@ -454,6 +559,7 @@ function showWorkspace() {
   els.mapName.value = state.mapName;
   setLocationMode(state.locationMode);
   renderSheet();
+  refreshQuotaDisplay();
 }
 
 function showMap() {
@@ -461,6 +567,7 @@ function showMap() {
   state.mapVisible = true;
   els.mapPane.hidden = false;
   els.workspace.classList.add("map-open");
+  if (els.showMapButton) els.showMapButton.hidden = true;
   refreshMapView();
 }
 
@@ -469,6 +576,7 @@ function hideMap() {
   state.mapVisible = false;
   els.mapPane.hidden = true;
   els.workspace.classList.remove("map-open");
+  if (els.showMapButton) els.showMapButton.hidden = false;
 }
 
 function enterMapFullscreen() {
@@ -514,8 +622,16 @@ function focusRowPin(row) {
 
 function highlightSheetRows() {
   els.sheetBody.querySelectorAll("tr").forEach((tr) => {
-    tr.classList.toggle("is-focused", tr.dataset.rowId === state.focusedRowId);
+    const focused = tr.dataset.rowId === state.focusedRowId;
+    tr.classList.toggle("is-focused", focused);
+    if (focused) tr.scrollIntoView({ block: "nearest", behavior: "smooth" });
   });
+}
+
+function focusPinFromMap(row, marker) {
+  state.focusedRowId = row.id;
+  highlightSheetRows();
+  if (marker) marker.openPopup();
 }
 
 function renderSheet() {
@@ -537,6 +653,9 @@ function renderSheet() {
     `;
     tr.querySelectorAll("textarea").forEach((input) => {
       input.addEventListener("input", () => {
+        if (looksLikeSpreadsheet(input.value) && applyExcelPaste(index, input.dataset.field, input.value)) {
+          return;
+        }
         row[input.dataset.field] = input.value;
         if (input.dataset.field === "address") {
           row.lat = null;
@@ -548,11 +667,15 @@ function renderSheet() {
       input.addEventListener("keydown", (event) => {
         if (event.key === "Enter") event.preventDefault();
       });
-      input.addEventListener("paste", (event) => {
-        const text = event.clipboardData?.getData("text/plain") || "";
-        if (applyExcelPaste(index, input.dataset.field, text)) {
+      input.addEventListener("beforeinput", (event) => {
+        if (event.inputType !== "insertFromPaste") return;
+        const text = event.data || "";
+        if (looksLikeSpreadsheet(text) && applyExcelPaste(index, input.dataset.field, text)) {
           event.preventDefault();
         }
+      });
+      input.addEventListener("paste", (event) => {
+        void handleSheetPaste(event, index, input.dataset.field);
       });
     });
     tr.querySelector("[data-delete]").addEventListener("click", (event) => {
@@ -575,7 +698,7 @@ function renderSheet() {
 
 function updateRowCount() {
   const count = filledRows().length;
-  els.rowCount.textContent = `${count}件 / ${LAYER_LIMIT}件（1レイヤ上限）`;
+  els.rowCount.textContent = `${count}件 / ${LAYER_LIMIT}件（1グループ上限）`;
   const over = count > LAYER_LIMIT;
   els.rowCount.classList.toggle("warn", over);
   els.layerNotice.classList.toggle("warn", over);
@@ -615,15 +738,97 @@ function isHeaderRow(cells) {
   );
 }
 
-function applyExcelPaste(startRowIndex, startField, text) {
+function parseHtmlTable(html) {
+  if (!html || !/<table/i.test(html)) return "";
+  try {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const rows = [...doc.querySelectorAll("table tr")];
+    if (!rows.length) return "";
+    return rows
+      .map((tr) =>
+        [...tr.querySelectorAll("th,td")]
+          .map((cell) => cell.textContent.replace(/\s+/g, " ").trim())
+          .join("\t")
+      )
+      .join("\n");
+  } catch {
+    return "";
+  }
+}
+
+function splitPasteRow(line) {
+  if (line.includes("\t")) return line.split("\t").map((cell) => cell.trim());
+  if (/\s{2,}/.test(line)) return line.split(/\s{2,}/).map((cell) => cell.trim());
+  return [line.trim()];
+}
+
+function parsePasteGrid(text) {
   const raw = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  if (!raw.trim()) return false;
+  if (!raw.trim()) return [];
   const lines = raw.split("\n");
   while (lines.length && lines[lines.length - 1] === "") lines.pop();
-  let grid = lines.map((line) => line.split("\t").map((cell) => cell.trim()));
+  let grid = lines.map(splitPasteRow).filter((cells) => cells.some((cell) => cell));
+  if (grid.length && isHeaderRow(grid[0])) grid = grid.slice(1);
+  return grid;
+}
+
+function looksLikeSpreadsheet(text) {
+  const grid = parsePasteGrid(text);
+  return grid.length > 1 || (grid.length === 1 && grid[0].length > 1);
+}
+
+function clipboardTextFromEvent(event) {
+  const html = event.clipboardData?.getData("text/html") || "";
+  const fromTable = parseHtmlTable(html);
+  if (fromTable) return fromTable;
+  return event.clipboardData?.getData("text/plain") || "";
+}
+
+let pasteBusy = false;
+
+async function handleSheetPaste(event, startRowIndex, startField) {
+  let text = clipboardTextFromEvent(event);
+  if (!text && navigator.clipboard?.readText) {
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      text = "";
+    }
+  }
+  if (!text) return;
+  if (applyExcelPaste(startRowIndex, startField, text)) {
+    event.preventDefault();
+  }
+}
+
+function focusedSheetCell() {
+  const active = document.activeElement;
+  if (active?.dataset?.field && els.sheetBody.contains(active)) {
+    const index = [...els.sheetBody.rows].indexOf(active.closest("tr"));
+    return { index: Math.max(0, index), field: active.dataset.field };
+  }
+  return { index: 0, field: "address" };
+}
+
+async function pasteClipboardIntoSheet() {
+  let text = "";
+  try {
+    text = await navigator.clipboard.readText();
+  } catch {
+    toast("クリップボードを読めませんでした。セルを長押しして貼り付けてください");
+    return;
+  }
+  const target = focusedSheetCell();
+  if (!applyExcelPaste(target.index, target.field, text)) {
+    toast("表形式のデータをコピーしてから貼り付けてください");
+  }
+}
+
+function applyExcelPaste(startRowIndex, startField, text) {
+  const grid = parsePasteGrid(text);
   if (!grid.length || (grid.length === 1 && grid[0].length === 1)) return false;
-  if (isHeaderRow(grid[0])) grid = grid.slice(1);
-  if (!grid.length) return false;
+  if (pasteBusy) return true;
+  pasteBusy = true;
 
   const startCol = Math.max(0, SHEET_FIELDS.indexOf(startField));
   grid.forEach((cells, offset) => {
@@ -647,10 +852,13 @@ function applyExcelPaste(startRowIndex, startField, text) {
   syncMarkers();
   const count = filledRows().length;
   if (count > LAYER_LIMIT) {
-    toast(`${grid.length}件を貼り付けました。1レイヤは最大${LAYER_LIMIT}件です。超えた分は別レイヤへ分けてください`);
+    toast(`${grid.length}件を貼り付けました。1グループは最大${LAYER_LIMIT}件です。超えた分は別グループへ分けてください`);
   } else {
     toast(`${grid.length}件を Excel から貼り付けました`);
   }
+  window.setTimeout(() => {
+    pasteBusy = false;
+  }, 0);
   return true;
 }
 
@@ -684,11 +892,14 @@ function syncMarkers() {
     if (existing) {
       existing.setLatLng([row.lat, row.lng]);
       existing.setPopupContent(popupHtml(row));
+      existing.off("click");
+      existing.on("click", () => focusPinFromMap(row, existing));
       return;
     }
     const marker = L.marker([row.lat, row.lng], { icon: createPinIcon() })
       .addTo(state.map)
       .bindPopup(popupHtml(row));
+    marker.on("click", () => focusPinFromMap(row, marker));
     state.markers.set(row.id, marker);
   });
 }
@@ -827,9 +1038,10 @@ async function geocodeWithYahoo(query) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query }),
   });
+  const data = await res.json().catch(() => ({}));
+  applyQuotaPayload(data);
   if (res.status === 429) throw new QuotaExceededError();
   if (!res.ok) return null;
-  const data = await res.json().catch(() => ({}));
   return asGeoResult(data.lat, data.lng, data.formatted);
 }
 
@@ -847,16 +1059,40 @@ function showQuotaDialog() {
   els.quotaDialog.showModal();
 }
 
+function renderQuota(data) {
+  if (!els.quotaCount) return data;
+  const count = Number(data?.count) || 0;
+  const limit = Number(data?.limit) || 40000;
+  const blocked = Boolean(data?.blocked) || count >= limit;
+  els.quotaCount.textContent = `本日のピン上限 ${count}/${limit}本`;
+  if (els.quotaLimitNote) els.quotaLimitNote.hidden = !blocked;
+  els.quotaStatus?.classList.toggle("is-blocked", blocked);
+  return { ...data, count, limit, blocked };
+}
+
 async function fetchQuota() {
   const res = await fetch("/api/quota");
   if (!res.ok) throw new Error("quota unavailable");
   return res.json();
 }
 
+async function refreshQuotaDisplay() {
+  try {
+    return renderQuota(await fetchQuota());
+  } catch {
+    return null;
+  }
+}
+
+function applyQuotaPayload(data) {
+  if (!data || (data.count == null && !data.quota)) return;
+  renderQuota(data.quota || data);
+}
+
 async function isQuotaBlocked() {
   try {
-    const data = await fetchQuota();
-    return Boolean(data.blocked);
+    const data = await refreshQuotaDisplay();
+    return Boolean(data?.blocked);
   } catch {
     return true;
   }
@@ -875,7 +1111,7 @@ async function geocodeAddress(address) {
     throw new QuotaExceededError();
   }
 
-  geocodeCache.set(query, found);
+  if (found) geocodeCache.set(query, found);
   return found;
 }
 
@@ -1024,6 +1260,7 @@ async function geocodeFilledRows() {
   }
   saveState();
   renderSheet();
+  refreshQuotaDisplay();
   return { pinned, missed, missedNames };
 }
 
@@ -1039,7 +1276,7 @@ async function registerToGoogle() {
     return;
   }
   if (rows.length > LAYER_LIMIT) {
-    toast(`1レイヤあたり${LAYER_LIMIT}件が上限です。${rows.length}件あるので、別レイヤに分けてから登録してください`);
+    toast(`1グループあたり${LAYER_LIMIT}件が上限です。${rows.length}件あるので、別グループに分けてから登録してください`);
     return;
   }
   if (await isQuotaBlocked()) {
@@ -1062,6 +1299,7 @@ async function registerToGoogle() {
     saveState();
     refreshMapView();
     if (err instanceof QuotaExceededError) {
+      refreshQuotaDisplay();
       showQuotaDialog();
       return;
     }
@@ -1171,8 +1409,11 @@ function setupGoogleAuth() {
         headers: { Authorization: `Bearer ${state.accessToken}` },
       }).then((res) => res.json());
       setRegisteredAccount(me.email || els.accountEmail.value);
-      refreshPremiumFromServer();
-      toast(`${getRegisteredEmail()} を確認して登録しました`);
+      try {
+        await syncFromDrive();
+      } catch {
+        toast("ログインしました。ドライブ同期は後でもう一度お試しください");
+      }
       els.accountDialog.close();
     },
   });
@@ -1232,6 +1473,7 @@ function bindEvents() {
   }
   els.toolbarSaveMymap.addEventListener("click", saveMymapFiles);
   els.closeMap.addEventListener("click", hideMap);
+  els.showMapButton?.addEventListener("click", showMap);
   els.backHome.addEventListener("click", showHome);
   els.mapName.addEventListener("input", () => {
     state.mapName = els.mapName.value;
@@ -1271,7 +1513,7 @@ function bindEvents() {
     if (!imported.length) return toast("CSVを読み取れませんでした");
     state.rows = [...imported, ...state.rows];
     if (filledRows().length > LAYER_LIMIT) {
-      toast(`読み込みました。1レイヤは最大${LAYER_LIMIT}件です。超えた分は別レイヤへ分けてください`);
+      toast(`読み込みました。1グループは最大${LAYER_LIMIT}件です。超えた分は別グループへ分けてください`);
     }
     saveState();
     renderSheet();
@@ -1294,6 +1536,9 @@ function bindEvents() {
     refreshMapView();
   });
   els.closeQuota.addEventListener("click", () => els.quotaDialog.close());
+  els.pasteClipboard?.addEventListener("click", () => {
+    void pasteClipboardIntoSheet();
+  });
   els.saveMymapFile.addEventListener("click", saveMymapFiles);
   els.googleSignin.addEventListener("click", openAccountDialog);
   els.googleSignout.addEventListener("click", () => {
@@ -1357,6 +1602,11 @@ function init() {
   bindEvents();
   loadGoogleMaps(getApiKey());
   window.setTimeout(setupGoogleAuth, 800);
+  refreshQuotaDisplay();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refreshQuotaDisplay();
+  });
+  window.addEventListener("pageshow", () => refreshQuotaDisplay());
 }
 
 init();
