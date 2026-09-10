@@ -431,6 +431,17 @@ textarea {
 
 .workspace.map-open .map-pane {
   display: block;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
+}
+
+.workspace.map-open #map {
+  height: 100%;
+  min-height: 0;
 }
 
 #map {
@@ -475,9 +486,10 @@ body.map-fullscreen {
   display: none;
 }
 
-.workspace.map-fullscreen .map-toolbar {
+.workspace.map-fullscreen .map-controls {
   left: auto;
   right: 12px;
+  align-items: flex-end;
 }
 
 .sheet tbody tr {
@@ -539,11 +551,114 @@ body.map-fullscreen {
   color: var(--muted);
 }
 
-.map-toolbar {
+.map-controls {
   position: absolute;
   z-index: 500;
   top: 12px;
-  left: 12px;
+  left: 56px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.map-controls > * {
+  pointer-events: auto;
+}
+
+.map-search {
+  display: flex;
+  gap: 6px;
+  width: min(420px, 100%);
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: var(--shadow);
+}
+
+.map-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  padding: 6px 8px;
+}
+
+.map-toolbar {
+  position: static;
+  z-index: auto;
+  top: auto;
+  left: auto;
+}
+
+.map-locate {
+  position: fixed;
+  z-index: 860;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(48px, calc(env(safe-area-inset-bottom) + 16px));
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.map-locate span {
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: 0 auto;
+  border: 3px solid var(--leaf);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(47, 122, 88, 0.18);
+}
+
+.map-pin-search {
+  background: #1c7ed6;
+}
+
+.map-user-dot {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+}
+
+.map-user-dot::before {
+  content: "";
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(28, 126, 214, 0.22);
+  animation: locate-pulse 1.8s ease-out infinite;
+}
+
+.map-user-dot span {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #1c7ed6;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+@keyframes locate-pulse {
+  from {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(1.8);
+    opacity: 0;
+  }
 }
 
 .leaflet-div-icon {
@@ -651,13 +766,22 @@ dialog::backdrop {
     grid-template-columns: 1fr;
   }
 
+  .workspace.map-open .map-pane {
+    position: relative;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+  }
+
   .map-pane {
     border-left: 0;
     border-top: 1px solid var(--line);
   }
 
-  #map {
+  #map,
+  .workspace.map-open #map {
     height: 50vh;
+    min-height: 50vh;
   }
 
   .workspace.map-fullscreen .sheet-pane {
@@ -669,7 +793,7 @@ dialog::backdrop {
     max-height: 38vh;
   }
 
-  .workspace.map-fullscreen .map-toolbar {
+  .workspace.map-fullscreen .map-controls {
     right: 8px;
   }
 }

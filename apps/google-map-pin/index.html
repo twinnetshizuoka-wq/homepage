@@ -164,20 +164,36 @@
         </div>
 
         <div class="map-pane" id="map-pane" hidden>
-          <div class="map-toolbar">
-            <button type="button" class="btn compact" id="fit-pins">
-              すべてのピンを表示
-            </button>
-            <button type="button" class="btn compact" id="expand-map">
-              全体表示
-            </button>
-            <button type="button" class="btn compact" id="shrink-map" hidden>
-              全体画面解除
-            </button>
-            <button type="button" class="btn compact" id="close-map">
-              地図を閉じる
-            </button>
+          <div class="map-controls">
+            <form class="map-search" id="map-search-form">
+              <input
+                id="map-search"
+                type="search"
+                placeholder="住所・駅・地名で検索"
+                autocomplete="off"
+                enterkeyhint="search"
+                aria-label="地図を検索"
+              />
+              <button type="submit" class="btn compact">検索</button>
+            </form>
+            <div class="map-toolbar">
+              <button type="button" class="btn compact" id="fit-pins">
+                すべてのピンを表示
+              </button>
+              <button type="button" class="btn compact" id="expand-map">
+                全体表示
+              </button>
+              <button type="button" class="btn compact" id="shrink-map" hidden>
+                全体画面解除
+              </button>
+              <button type="button" class="btn compact" id="close-map">
+                地図を閉じる
+              </button>
+            </div>
           </div>
+          <button type="button" class="map-locate" id="locate-me" title="現在地を表示" aria-label="現在地を表示">
+            <span aria-hidden="true"></span>
+          </button>
           <div id="map" role="application" aria-label="ピンを表示する地図"></div>
         </div>
       </section>
@@ -283,7 +299,7 @@
             placeholder="you@gmail.com"
           />
         </label>
-        <label>
+        <label hidden>
           Google OAuth クライアントID
           <input
             id="oauth-client-id"
@@ -292,7 +308,7 @@
             placeholder="123456789-xxxx.apps.googleusercontent.com"
           />
         </label>
-        <label>
+        <label hidden>
           Google Maps API キー（住所検索用・任意）
           <input
             id="api-key-input"

@@ -29,6 +29,8 @@ const state = {
   rows: [],
   map: null,
   markers: new Map(),
+  locationMarker: null,
+  searchMarker: null,
   mapReady: false,
   googleReady: false,
   geocoder: null,
@@ -71,6 +73,9 @@ const els = {
   importCsv: document.getElementById("import-csv"),
   rowCount: document.getElementById("row-count"),
   fitPins: document.getElementById("fit-pins"),
+  mapSearchForm: document.getElementById("map-search-form"),
+  mapSearch: document.getElementById("map-search"),
+  locateMe: document.getElementById("locate-me"),
   expandMap: document.getElementById("expand-map"),
   shrinkMap: document.getElementById("shrink-map"),
   signedInLabel: document.getElementById("signed-in-label"),
@@ -1002,6 +1007,129 @@ function fitPins() {
   );
 }
 
+function createLocationIcon() {
+  return L.divIcon({
+    className: "",
+    html: `<div class="map-user-dot"><span></span></div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -12],
+  });
+}
+
+function createSearchIcon() {
+  return L.divIcon({
+    className: "",
+    html: `<div class="map-pin map-pin-search"></div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 22],
+    popupAnchor: [0, -18],
+  });
+}
+
+function showPointOnMap(lat, lng, label, kind) {
+  if (!state.mapReady) initMap();
+  const markerKey = kind === "location" ? "locationMarker" : "searchMarker";
+  const icon = kind === "location" ? createLocationIcon() : createSearchIcon();
+  if (state[markerKey]) {
+    state[markerKey].setLatLng([lat, lng]);
+    state[markerKey].setIcon(icon);
+    state[markerKey].setPopupContent(escapeHtml(label));
+  } else {
+    state[markerKey] = L.marker([lat, lng], { icon, zIndexOffset: 1200 })
+      .addTo(state.map)
+      .bindPopup(escapeHtml(label));
+  }
+  state.map.setView([lat, lng], Math.max(state.map.getZoom() || 0, 15));
+  state[markerKey].openPopup();
+}
+
+async function waitForMap() {
+  if (!state.mapVisible) showMap();
+  if (!state.mapReady) initMap();
+  await new Promise((resolve) => window.setTimeout(resolve, 250));
+  state.map?.invalidateSize();
+}
+
+async function searchWithNominatim(query) {
+  const url = new URL("https://nominatim.openstreetmap.org/search");
+  url.searchParams.set("format", "json");
+  url.searchParams.set("q", query);
+  url.searchParams.set("limit", "1");
+  url.searchParams.set("countrycodes", "jp");
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json", "Accept-Language": "ja" },
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    const hit = Array.isArray(data) ? data[0] : null;
+    const lat = Number(hit?.lat);
+    const lng = Number(hit?.lon);
+    if (!isValidLatLng(lat, lng)) return null;
+    return { lat, lng, label: hit.display_name || query };
+  } catch {
+    return null;
+  }
+}
+
+async function searchMapPlace(query) {
+  const text = String(query || "").trim();
+  if (!text) {
+    toast("検索する住所や地名を入力してください");
+    return;
+  }
+  toast("場所を検索しています…");
+  await waitForMap();
+  let found = await searchWithNominatim(text);
+  if (!found) {
+    try {
+      const geo = await geocodeAddress(text);
+      if (geo) found = { lat: geo.lat, lng: geo.lng, label: geo.formatted || text };
+    } catch (err) {
+      if (err instanceof QuotaExceededError) {
+        showQuotaDialog();
+        return;
+      }
+    }
+  }
+  if (!found) {
+    toast("場所が見つかりませんでした");
+    return;
+  }
+  showPointOnMap(found.lat, found.lng, found.label, "search");
+  toast("場所を表示しました");
+}
+
+function goToCurrentLocation() {
+  if (!navigator.geolocation) {
+    toast("この端末では現在地を使えません");
+    return;
+  }
+  toast("現在地を取得しています…");
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      if (!isValidLatLng(lat, lng)) {
+        toast("現在地を取得できませんでした");
+        return;
+      }
+      await waitForMap();
+      showPointOnMap(lat, lng, "現在地", "location");
+      toast(isInJapan(lat, lng) ? "現在地を表示しました" : "日本の外の位置です");
+    },
+    (error) => {
+      if (error.code === error.PERMISSION_DENIED) {
+        toast("現在地の利用が許可されていません");
+        return;
+      }
+      toast("現在地を取得できませんでした");
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 20000 }
+  );
+}
+
 function initMap() {
   state.map = L.map("map").setView([36.2, 138.25], 5);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -1622,6 +1750,11 @@ function bindEvents() {
     syncMarkers();
   });
   els.fitPins.addEventListener("click", fitPins);
+  els.mapSearchForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void searchMapPlace(els.mapSearch?.value);
+  });
+  els.locateMe?.addEventListener("click", goToCurrentLocation);
   els.expandMap.addEventListener("click", enterMapFullscreen);
   els.shrinkMap.addEventListener("click", exitMapFullscreen);
   document.addEventListener("keydown", (event) => {
