@@ -601,6 +601,16 @@ body.map-fullscreen {
   left: auto;
 }
 
+.map-hint {
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .map-locate {
   position: fixed;
   z-index: 860;
@@ -798,12 +808,20 @@ dialog::backdrop {
 }
 
 @media (max-width: 980px) {
-  .workspace {
+  .workspace,
+  .workspace.map-open {
     grid-template-columns: 1fr;
+  }
+
+  .workspace.map-open .sheet-pane,
+  .workspace.map-open .map-pane {
+    min-width: 0;
   }
 
   .workspace.map-open .map-pane {
     position: relative;
+    top: auto;
+    align-self: stretch;
     height: auto;
     max-height: none;
     min-height: 0;

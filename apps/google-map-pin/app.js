@@ -17,11 +17,11 @@ const PROGRESS_OPTIONS = ["未着手", "対応中", "完了", "保留"];
 const IMOBILE_SCRIPT = "https://imp-adedge.i-mobile.co.jp/script/v1/spot.js?20220104";
 const IMOBILE_SPOT = {
   pid: 85422,
-  mid: 596197,
-  asid: 1943754,
+  mid: 596245,
+  asid: 1943777,
   type: "banner",
   display: "inline",
-  elementid: "im-a30aadfae5aa47c99bb595f7b11853ef",
+  elementid: "im-80ac5ca09d304850a6ee20b8972e2ae9",
 };
 
 const state = {
@@ -341,12 +341,22 @@ function mergeGroups(localGroups, cloudGroups) {
 }
 
 async function findDriveDataFile() {
-  const existing = localStorage.getItem(DRIVE_DATA_ID_KEY);
-  if (existing) return existing;
   if (!state.accessToken) return "";
+  const existing = localStorage.getItem(DRIVE_DATA_ID_KEY);
+  if (existing) {
+    const check = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${existing}?fields=id,trashed`,
+      { headers: { Authorization: `Bearer ${state.accessToken}` } }
+    );
+    if (check.ok) {
+      const meta = await check.json().catch(() => ({}));
+      if (meta.id && !meta.trashed) return meta.id;
+    }
+    localStorage.removeItem(DRIVE_DATA_ID_KEY);
+  }
   const query = encodeURIComponent("name = 'mymap-pin-app-data.json' and trashed = false");
   const response = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=${query}&spaces=drive&fields=files(id,name)`,
+    `https://www.googleapis.com/drive/v3/files?q=${query}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=10`,
     { headers: { Authorization: `Bearer ${state.accessToken}` } }
   );
   const data = await response.json().catch(() => ({}));
@@ -356,11 +366,19 @@ async function findDriveDataFile() {
 }
 
 async function downloadDriveGroups() {
-  const id = await findDriveDataFile();
+  let id = await findDriveDataFile();
   if (!id) return null;
-  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, {
-    headers: { Authorization: `Bearer ${state.accessToken}` },
-  });
+  const load = (fileId) =>
+    fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+      headers: { Authorization: `Bearer ${state.accessToken}` },
+    });
+  let response = await load(id);
+  if (response.status === 404) {
+    localStorage.removeItem(DRIVE_DATA_ID_KEY);
+    id = await findDriveDataFile();
+    if (!id) return null;
+    response = await load(id);
+  }
   if (!response.ok) return null;
   return response.json().catch(() => null);
 }
@@ -465,6 +483,7 @@ function renderGroups() {
         state.rows = [emptyRow()];
       }
       persistGroups();
+      scheduleDriveSync();
       renderGroups();
     });
     els.groupsList.appendChild(item);
@@ -1030,20 +1049,54 @@ function bindPinPopupActions(popup) {
   const root = popup?.getElement?.();
   if (!root) return;
   const deleteButton = root.querySelector("[data-delete-pin]");
-  if (deleteButton && deleteButton.dataset.bound !== "1") {
-    deleteButton.dataset.bound = "1";
-    L.DomEvent.disableClickPropagation(deleteButton);
-    deleteButton.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      deleteRowById(deleteButton.dataset.deletePin);
-    });
-  }
+  if (deleteButton) L.DomEvent.disableClickPropagation(deleteButton);
   const navLink = root.querySelector("[data-nav-pin]");
-  if (navLink && navLink.dataset.bound !== "1") {
-    navLink.dataset.bound = "1";
-    L.DomEvent.disableClickPropagation(navLink);
-  }
+  if (navLink) L.DomEvent.disableClickPropagation(navLink);
+}
+
+function bindGlobalPinPopupClicks() {
+  if (bindGlobalPinPopupClicks.done) return;
+  bindGlobalPinPopupClicks.done = true;
+  let lastDelete = 0;
+  const handler = (event) => {
+    const deleteButton = event.target.closest?.("[data-delete-pin]");
+    if (!deleteButton) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const now = Date.now();
+    if (now - lastDelete < 400) return;
+    lastDelete = now;
+    deleteRowById(deleteButton.getAttribute("data-delete-pin"));
+  };
+  document.addEventListener("pointerup", handler, true);
+  document.addEventListener("click", handler, true);
+}
+
+function isMapUiTarget(target) {
+  return Boolean(
+    target?.closest?.(
+      ".leaflet-marker-icon, .leaflet-popup, .leaflet-control, .map-pin, .map-locate, .map-controls, .pin-popup"
+    )
+  );
+}
+
+async function addPinAt(latlng) {
+  if (!latlng) return;
+  const lat = latlng.lat;
+  const lng = latlng.lng;
+  if (!isValidLatLng(lat, lng)) return;
+  toast("住所を取得しています…");
+  const address = await reverseGeocode(lat, lng);
+  const blank = state.rows.find((row) => !row.address.trim());
+  const row = blank || emptyRow();
+  row.address = address;
+  row.propertyName = row.propertyName || address.split(/[,\s]/)[0];
+  row.lat = lat;
+  row.lng = lng;
+  if (!blank) state.rows.push(row);
+  saveState();
+  renderSheet();
+  syncMarkers();
 }
 
 function syncMarkers() {
@@ -1219,21 +1272,42 @@ function initMap() {
   }).addTo(state.map);
   state.mapReady = true;
   state.map.on("popupopen", (event) => bindPinPopupActions(event.popup));
-  state.map.on("click", async (event) => {
-    const { lat, lng } = event.latlng;
-    toast("住所を取得しています…");
-    const address = await reverseGeocode(lat, lng);
-    const blank = state.rows.find((row) => !row.address.trim());
-    const row = blank || emptyRow();
-    row.address = address;
-    row.propertyName = row.propertyName || address.split(/[,\s]/)[0];
-    row.lat = lat;
-    row.lng = lng;
-    if (!blank) state.rows.push(row);
-    saveState();
-    renderSheet();
-    syncMarkers();
+  let lastPinAt = 0;
+  const placeFromEvent = (event) => {
+    if (isMapUiTarget(event.originalEvent?.target)) return;
+    const now = Date.now();
+    if (now - lastPinAt < 800) return;
+    lastPinAt = now;
+    void addPinAt(event.latlng);
+  };
+  state.map.on("contextmenu", (event) => {
+    L.DomEvent.preventDefault(event);
+    placeFromEvent(event);
   });
+  const mapEl = state.map.getContainer();
+  let holdTimer = 0;
+  const clearHold = () => window.clearTimeout(holdTimer);
+  mapEl.addEventListener(
+    "touchstart",
+    (event) => {
+      if (event.touches.length !== 1 || isMapUiTarget(event.target)) return;
+      const touch = event.touches[0];
+      clearHold();
+      holdTimer = window.setTimeout(() => {
+        const latlng = state.map.mouseEventToLatLng(touch);
+        const now = Date.now();
+        if (now - lastPinAt < 800) return;
+        lastPinAt = now;
+        navigator.vibrate?.(20);
+        void addPinAt(latlng);
+      }, 550);
+    },
+    { passive: true }
+  );
+  mapEl.addEventListener("touchend", clearHold, { passive: true });
+  mapEl.addEventListener("touchcancel", clearHold, { passive: true });
+  mapEl.addEventListener("touchmove", clearHold, { passive: true });
+  mapEl.addEventListener("contextmenu", (event) => event.preventDefault());
   syncMarkers();
   if (state.rows.some((row) => isValidLatLng(row.lat, row.lng))) fitPins();
 }
@@ -1705,15 +1779,23 @@ function loadGoogleMaps(apiKey) {
   document.head.appendChild(script);
 }
 
+let googleAuthSilent = false;
+let pendingDriveResolve = null;
+
 function setupGoogleAuth() {
   const clientId = getOauthClientId();
   if (!clientId || !window.google?.accounts?.oauth2) return;
+  if (state.tokenClient) return;
   state.tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
     scope: DRIVE_SCOPE,
     callback: async (response) => {
+      const silent = googleAuthSilent;
+      googleAuthSilent = false;
       if (response.error) {
-        toast("Googleログインに失敗しました");
+        if (!silent) toast("Googleログインに失敗しました");
+        pendingDriveResolve?.(false);
+        pendingDriveResolve = null;
         return;
       }
       state.accessToken = response.access_token;
@@ -1723,11 +1805,32 @@ function setupGoogleAuth() {
       setRegisteredAccount(me.email || els.accountEmail.value);
       try {
         await syncFromDrive();
+        pendingDriveResolve?.(true);
       } catch {
-        toast("ログインしました。ドライブ同期は後でもう一度お試しください");
+        if (!silent) toast("ログインしました。ドライブ同期は後でもう一度お試しください");
+        pendingDriveResolve?.(false);
       }
-      els.accountDialog.close();
+      pendingDriveResolve = null;
+      if (!silent) els.accountDialog.close();
     },
+  });
+}
+
+function whenGoogleAuthReady() {
+  return new Promise((resolve) => {
+    if (window.google?.accounts?.oauth2) {
+      setupGoogleAuth();
+      resolve(Boolean(state.tokenClient));
+      return;
+    }
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      if (window.google?.accounts?.oauth2 || Date.now() - started > 8000) {
+        window.clearInterval(timer);
+        setupGoogleAuth();
+        resolve(Boolean(state.tokenClient));
+      }
+    }, 250);
   });
 }
 
@@ -1736,31 +1839,68 @@ function isEmbeddedBrowser() {
   return /Electron/i.test(ua) || window.self !== window.top;
 }
 
-function requestGoogleSignIn() {
+function requestGoogleSignIn(options = {}) {
   if (isEmbeddedBrowser()) {
-    toast("Googleの画面は Chrome または Edge で開いてください");
+    if (!options.silent) toast("Googleの画面は Chrome または Edge で開いてください");
     return;
   }
   if (!getOauthClientId()) {
-    openAccountDialog();
-    toast("メールアドレスを登録してください");
+    if (!options.silent) openAccountDialog();
     return;
   }
   if (!state.tokenClient) setupGoogleAuth();
   if (!state.tokenClient) {
-    toast("Googleログインの読み込み中です。数秒後にもう一度押してください");
+    if (!options.silent) toast("Googleログインの読み込み中です。数秒後にもう一度押してください");
     return;
   }
+  googleAuthSilent = Boolean(options.silent);
   const hint = getRegisteredEmail() || els.accountEmail?.value || "";
-  state.tokenClient.requestAccessToken({ hint });
+  const request = { hint };
+  if (options.silent) request.prompt = "";
+  state.tokenClient.requestAccessToken(request);
+}
+
+function ensureDriveSession(options = {}) {
+  return new Promise((resolve) => {
+    if (state.accessToken) {
+      syncFromDrive()
+        .then(() => resolve(true))
+        .catch(() => resolve(false));
+      return;
+    }
+    if (!getRegisteredEmail() && !options.forcePrompt) {
+      resolve(false);
+      return;
+    }
+    pendingDriveResolve = resolve;
+    void whenGoogleAuthReady().then((ready) => {
+      if (!ready) {
+        if (pendingDriveResolve === resolve) pendingDriveResolve = null;
+        resolve(false);
+        return;
+      }
+      requestGoogleSignIn(options);
+      if (options.silent) {
+        window.setTimeout(() => {
+          if (pendingDriveResolve === resolve) {
+            pendingDriveResolve = null;
+            resolve(false);
+          }
+        }, 5000);
+      }
+    });
+  });
 }
 
 function bindEvents() {
   els.newRegister.addEventListener("click", () => withAd(startNewGroup));
   els.openMyMap.addEventListener("click", () =>
     withAd(() => {
-      renderGroups();
-      els.groupsDialog.showModal();
+      void (async () => {
+        if (getRegisteredEmail()) await ensureDriveSession({ silent: true });
+        renderGroups();
+        els.groupsDialog.showModal();
+      })();
     })
   );
   els.openGoogleMyMaps.addEventListener("click", () => {
@@ -1865,7 +2005,7 @@ function bindEvents() {
     els.accountEmail.value = "";
     toast("Googleアカウントの登録を解除しました");
   });
-  els.saveAccount.addEventListener("click", registerAccountFromInput);
+  els.saveAccount?.addEventListener("click", registerAccountFromInput);
   els.confirmAccount.addEventListener("click", () => {
     const typed = els.accountEmail.value.trim();
     if (typed) setRegisteredAccount(typed);
@@ -1918,8 +2058,12 @@ function init() {
   state.userEmail = getRegisteredEmail();
   renderAccount();
   bindEvents();
+  bindGlobalPinPopupClicks();
   loadGoogleMaps(getApiKey());
-  window.setTimeout(setupGoogleAuth, 800);
+  window.setTimeout(() => {
+    setupGoogleAuth();
+    if (getRegisteredEmail()) void ensureDriveSession({ silent: true });
+  }, 800);
   refreshQuotaDisplay();
   restoreHomeAd();
   document.addEventListener("visibilitychange", () => {
