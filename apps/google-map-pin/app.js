@@ -722,7 +722,10 @@ function renderSheet() {
         <select data-field="progress" aria-label="進捗">${progressOptionsHtml(row.progress)}</select>
       </td>
       <td><textarea data-field="note" rows="2">${escapeHtml(row.note)}</textarea></td>
-      <td class="col-action"><button type="button" class="btn danger" data-delete>削除</button></td>
+      <td class="col-action">
+        <button type="button" class="btn compact" data-nav title="Googleマップでナビ">ナビ</button>
+        <button type="button" class="btn danger" data-delete>削除</button>
+      </td>
     `;
     tr.querySelectorAll("textarea").forEach((input) => {
       input.addEventListener("input", () => {
@@ -761,6 +764,10 @@ function renderSheet() {
       row.progress = normalizeProgress(event.target.value);
       saveState();
       syncMarkers();
+    });
+    tr.querySelector("[data-nav]").addEventListener("click", (event) => {
+      event.stopPropagation();
+      openNavigation(row);
     });
     tr.querySelector("[data-delete]").addEventListener("click", (event) => {
       event.stopPropagation();
@@ -955,12 +962,50 @@ function createPinIcon(color) {
   });
 }
 
+function destinationQuery(row) {
+  if (isValidLatLng(row.lat, row.lng)) return `${row.lat},${row.lng}`;
+  return String(locationLabel(row) || "").trim();
+}
+
+function navigationUrl(row) {
+  const destination = destinationQuery(row);
+  if (!destination) return "";
+  const apple = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (apple) {
+    const url = new URL("https://maps.apple.com/");
+    url.searchParams.set("daddr", destination);
+    url.searchParams.set("dirflg", "d");
+    return url.toString();
+  }
+  const url = new URL("https://www.google.com/maps/dir/");
+  url.searchParams.set("api", "1");
+  url.searchParams.set("destination", destination);
+  url.searchParams.set("travelmode", "driving");
+  return url.toString();
+}
+
+function openNavigation(row) {
+  const url = navigationUrl(row);
+  if (!url) {
+    toast("この行の位置がまだありません。「ピンを刺す」を押してください");
+    return;
+  }
+  window.open(url, "_blank", "noopener");
+}
+
 function popupHtml(row) {
+  const nav = navigationUrl(row);
+  const navControl = nav
+    ? `<a class="btn compact pin-popup-nav" href="${escapeAttr(nav)}" target="_blank" rel="noopener" data-nav-pin>ナビ</a>`
+    : "";
   return `<div class="pin-popup">
       <strong>${escapeHtml(row.propertyName || row.address)}</strong><br>${escapeHtml(row.address)}
       <br>自社: ${escapeHtml(row.companyRep || "-")} / 取引: ${escapeHtml(row.clientRep || "-")}
       <br>進捗: ${escapeHtml(normalizeProgress(row.progress))}
-      <button type="button" class="btn danger pin-popup-delete" data-delete-pin="${escapeAttr(row.id)}">このピンを削除</button>
+      <div class="pin-popup-actions">
+        ${navControl}
+        <button type="button" class="btn danger pin-popup-delete" data-delete-pin="${escapeAttr(row.id)}">このピンを削除</button>
+      </div>
     </div>`;
 }
 
@@ -983,15 +1028,22 @@ function deleteRowById(id) {
 
 function bindPinPopupActions(popup) {
   const root = popup?.getElement?.();
-  const button = root?.querySelector("[data-delete-pin]");
-  if (!button || button.dataset.bound === "1") return;
-  button.dataset.bound = "1";
-  L.DomEvent.disableClickPropagation(button);
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    deleteRowById(button.dataset.deletePin);
-  });
+  if (!root) return;
+  const deleteButton = root.querySelector("[data-delete-pin]");
+  if (deleteButton && deleteButton.dataset.bound !== "1") {
+    deleteButton.dataset.bound = "1";
+    L.DomEvent.disableClickPropagation(deleteButton);
+    deleteButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      deleteRowById(deleteButton.dataset.deletePin);
+    });
+  }
+  const navLink = root.querySelector("[data-nav-pin]");
+  if (navLink && navLink.dataset.bound !== "1") {
+    navLink.dataset.bound = "1";
+    L.DomEvent.disableClickPropagation(navLink);
+  }
 }
 
 function syncMarkers() {

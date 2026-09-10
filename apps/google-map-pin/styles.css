@@ -372,7 +372,7 @@ textarea {
 }
 
 .col-action {
-  width: 52px;
+  width: 76px;
 }
 
 .col-color {
@@ -390,6 +390,13 @@ textarea {
   text-align: center;
   padding: 8px;
   color: var(--muted);
+}
+
+.sheet .col-action {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  align-content: center;
 }
 
 .sheet .col-color,
@@ -624,11 +631,27 @@ body.map-fullscreen {
   line-height: 1.5;
 }
 
+.pin-popup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.pin-popup-nav,
 .pin-popup-delete {
   display: inline-flex;
-  margin-top: 8px;
   padding: 4px 10px;
   border-radius: 999px;
+}
+
+.pin-popup-nav {
+  background: var(--leaf);
+  color: #fff;
+  text-decoration: none;
+}
+
+.pin-popup-delete {
   background: #fff1ef;
 }
 
