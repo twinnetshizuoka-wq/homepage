@@ -27,7 +27,7 @@
           <h1>google maps ピン刺しアプリ</h1>
         </div>
         <div class="topbar-actions">
-          <span class="account-badge" id="account-badge" hidden></span>
+          <button type="button" class="account-badge" id="account-badge" hidden></button>
           <button type="button" class="btn ghost" id="google-signin">
             Googleアカウントを登録
           </button>
@@ -207,9 +207,13 @@
       <div class="dialog-card">
         <h2>ピンのグループを開く</h2>
         <p class="fine">保存したグループ名を選ぶと、登録データとピンを開けます。</p>
+        <p class="fine" id="groups-sync-note">
+          メールが表示されていても、同期には Google の許可画面が必要です。「Googleと同期」を押してください。
+        </p>
         <ul class="group-list" id="groups-list"></ul>
         <p class="empty" id="groups-empty">保存されたグループはまだありません。</p>
         <div class="form-actions">
+          <button type="button" class="btn primary" id="sync-groups">Googleと同期</button>
           <button type="button" class="btn ghost" id="close-groups">閉じる</button>
         </div>
       </div>

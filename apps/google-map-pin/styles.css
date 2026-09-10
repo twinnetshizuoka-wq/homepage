@@ -99,15 +99,23 @@ h1 {
 }
 
 .account-badge {
-  max-width: 220px;
+  max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   padding: 4px 10px;
+  border: 0;
   border-radius: 999px;
   background: #e8f3ec;
   color: var(--forest);
+  font: inherit;
   font-size: 12px;
+  cursor: pointer;
+}
+
+.account-badge.unsynced {
+  background: #f8e8d8;
+  color: #8a4b12;
 }
 
 .account-status {
