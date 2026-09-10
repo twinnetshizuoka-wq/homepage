@@ -764,12 +764,7 @@ function renderSheet() {
     });
     tr.querySelector("[data-delete]").addEventListener("click", (event) => {
       event.stopPropagation();
-      state.rows = state.rows.filter((item) => item.id !== row.id);
-      if (!state.rows.length) state.rows.push(emptyRow());
-      if (state.focusedRowId === row.id) state.focusedRowId = null;
-      saveState();
-      renderSheet();
-      syncMarkers();
+      deleteRowById(row.id);
     });
     tr.addEventListener("click", (event) => {
       if (event.target.closest("textarea, button, input, select, label")) return;
@@ -961,9 +956,42 @@ function createPinIcon(color) {
 }
 
 function popupHtml(row) {
-  return `<strong>${escapeHtml(row.propertyName || row.address)}</strong><br>${escapeHtml(row.address)}
-    <br>自社: ${escapeHtml(row.companyRep || "-")} / 取引: ${escapeHtml(row.clientRep || "-")}
-    <br>進捗: ${escapeHtml(normalizeProgress(row.progress))}`;
+  return `<div class="pin-popup">
+      <strong>${escapeHtml(row.propertyName || row.address)}</strong><br>${escapeHtml(row.address)}
+      <br>自社: ${escapeHtml(row.companyRep || "-")} / 取引: ${escapeHtml(row.clientRep || "-")}
+      <br>進捗: ${escapeHtml(normalizeProgress(row.progress))}
+      <button type="button" class="btn danger pin-popup-delete" data-delete-pin="${escapeAttr(row.id)}">このピンを削除</button>
+    </div>`;
+}
+
+function deleteRowById(id) {
+  if (!id || !state.rows.some((item) => item.id === id)) return;
+  state.rows = state.rows.filter((item) => item.id !== id);
+  if (!state.rows.length) state.rows.push(emptyRow());
+  if (state.focusedRowId === id) state.focusedRowId = null;
+  const marker = state.markers.get(id);
+  if (marker) {
+    marker.closePopup();
+    marker.remove();
+    state.markers.delete(id);
+  }
+  saveState();
+  renderSheet();
+  syncMarkers();
+  toast("ピンを削除しました");
+}
+
+function bindPinPopupActions(popup) {
+  const root = popup?.getElement?.();
+  const button = root?.querySelector("[data-delete-pin]");
+  if (!button || button.dataset.bound === "1") return;
+  button.dataset.bound = "1";
+  L.DomEvent.disableClickPropagation(button);
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    deleteRowById(button.dataset.deletePin);
+  });
 }
 
 function syncMarkers() {
@@ -982,6 +1010,7 @@ function syncMarkers() {
       existing.setLatLng([row.lat, row.lng]);
       existing.setIcon(createPinIcon(row.pinColor));
       existing.setPopupContent(popupHtml(row));
+      bindPinPopupActions(existing.getPopup());
       existing.off("click");
       existing.on("click", () => focusPinFromMap(row, existing));
       return;
@@ -1137,6 +1166,7 @@ function initMap() {
     attribution: "&copy; OpenStreetMap",
   }).addTo(state.map);
   state.mapReady = true;
+  state.map.on("popupopen", (event) => bindPinPopupActions(event.popup));
   state.map.on("click", async (event) => {
     const { lat, lng } = event.latlng;
     toast("住所を取得しています…");

@@ -619,6 +619,19 @@ body.map-fullscreen {
   box-shadow: 0 0 0 3px rgba(47, 122, 88, 0.18);
 }
 
+.pin-popup {
+  min-width: 180px;
+  line-height: 1.5;
+}
+
+.pin-popup-delete {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fff1ef;
+}
+
 .map-pin-search {
   background: #1c7ed6;
 }
