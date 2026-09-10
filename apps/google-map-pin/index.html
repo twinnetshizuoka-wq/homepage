@@ -47,6 +47,10 @@
         <p class="home-lead">
           管理中の Excel から住所や物件名をコピーして貼り付け、Google マイマップへピンを登録します。
         </p>
+        <aside class="ad-slot" aria-label="広告">
+          <p class="ad-label">広告</p>
+          <div id="home-ad"></div>
+        </aside>
         <div class="home-actions">
           <button type="button" class="btn huge primary" id="new-register">
             新規登録
@@ -66,6 +70,7 @@
         </p>
         <p class="home-note">
           このページは Chrome または Edge での利用を推奨します。
+          広告配信については<a href="../../privacy.html">プライバシーポリシー</a>をご確認ください。
         </p>
         <p class="home-note" id="signed-in-label"></p>
       </section>
@@ -140,10 +145,12 @@
               <thead>
                 <tr>
                   <th class="col-num">#</th>
+                  <th class="col-color">色</th>
                   <th>住所</th>
                   <th>物件名</th>
                   <th>自社担当者</th>
                   <th>取引担当者</th>
+                  <th class="col-progress">進捗</th>
                   <th>備考</th>
                   <th class="col-action"></th>
                 </tr>

@@ -315,7 +315,7 @@ textarea {
 
 .sheet {
   width: 100%;
-  min-width: 860px;
+  min-width: 1040px;
   border-collapse: collapse;
 }
 
@@ -375,11 +375,47 @@ textarea {
   width: 52px;
 }
 
+.col-color {
+  width: 48px;
+}
+
+.col-progress {
+  width: 92px;
+}
+
 .sheet .col-num,
-.sheet .col-action {
+.sheet .col-action,
+.sheet .col-color,
+.sheet .col-progress {
   text-align: center;
   padding: 8px;
   color: var(--muted);
+}
+
+.sheet .col-color,
+.sheet .col-progress {
+  vertical-align: middle;
+}
+
+.pin-color {
+  display: block;
+  width: 32px;
+  height: 28px;
+  margin: 0 auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sheet .col-progress select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 4px;
+  background: #fff;
+  font: inherit;
 }
 
 .fine {
@@ -449,7 +485,9 @@ body.map-fullscreen {
 }
 
 .sheet tbody tr textarea,
-.sheet tbody tr button {
+.sheet tbody tr button,
+.sheet tbody tr input,
+.sheet tbody tr select {
   cursor: auto;
 }
 
@@ -554,19 +592,34 @@ dialog::backdrop {
   letter-spacing: 0.08em;
 }
 
-.ad-frame {
-  min-height: 140px;
-  padding: 20px;
-  border: 2px dashed #e0c56b;
-  border-radius: 16px;
-  background: #fff;
-  text-align: center;
+.ad-slot {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  margin: 0 auto;
 }
 
-.ad-frame strong {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 20px;
+.ad-label {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.ad-frame,
+#home-ad {
+  min-width: min(300px, 100%);
+  min-height: 250px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.ad-frame {
+  padding: 8px;
 }
 
 .toast {

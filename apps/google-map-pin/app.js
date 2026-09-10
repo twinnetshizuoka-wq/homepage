@@ -12,10 +12,17 @@ const DRIVE_DATA_NAME = "mymap-pin-app-data.json";
 const DRIVE_DATA_ID_KEY = "mymap-pin-app:drive-data-id";
 const LAYER_LIMIT = 1000;
 const SHEET_FIELDS = ["address", "propertyName", "companyRep", "clientRep", "note"];
-const ADS = [
-  { title: "物件まわりの業務をもっと早く", body: "住所・担当者・備考を表でまとめて、地図にピンを残せます。" },
-  { title: "訪問前の地図づくりに", body: "自社担当と取引担当を残して、現場共有用のマイマップを作れます。" },
-];
+const DEFAULT_PIN_COLOR = "#e03131";
+const PROGRESS_OPTIONS = ["未着手", "対応中", "完了", "保留"];
+const IMOBILE_SCRIPT = "https://imp-adedge.i-mobile.co.jp/script/v1/spot.js?20220104";
+const IMOBILE_SPOT = {
+  pid: 85422,
+  mid: 596197,
+  asid: 1943754,
+  type: "banner",
+  display: "inline",
+  elementid: "im-a30aadfae5aa47c99bb595f7b11853ef",
+};
 
 const state = {
   mapName: "",
@@ -80,6 +87,7 @@ const els = {
   openSettings: document.getElementById("open-settings"),
   adDialog: document.getElementById("ad-dialog"),
   adFrame: document.getElementById("ad-frame"),
+  homeAd: document.getElementById("home-ad"),
   adContinue: document.getElementById("ad-continue"),
   settingsDialog: document.getElementById("settings-dialog"),
   settingsForm: document.getElementById("settings-form"),
@@ -132,6 +140,28 @@ function normalizePlaceQuery(text) {
     .trim();
 }
 
+function sanitizePinColor(value) {
+  const text = String(value || "").trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(text)) return text.toLowerCase();
+  if (/^#[0-9a-fA-F]{3}$/.test(text)) {
+    return `#${text[1]}${text[1]}${text[2]}${text[2]}${text[3]}${text[3]}`.toLowerCase();
+  }
+  return DEFAULT_PIN_COLOR;
+}
+
+function normalizeProgress(value) {
+  const text = String(value || "").trim();
+  return PROGRESS_OPTIONS.includes(text) ? text : "未着手";
+}
+
+function progressOptionsHtml(selected) {
+  const current = normalizeProgress(selected);
+  return PROGRESS_OPTIONS.map(
+    (option) =>
+      `<option value="${escapeAttr(option)}"${option === current ? " selected" : ""}>${escapeHtml(option)}</option>`
+  ).join("");
+}
+
 function emptyRow() {
   return {
     id: crypto.randomUUID(),
@@ -139,7 +169,9 @@ function emptyRow() {
     propertyName: "",
     companyRep: "",
     clientRep: "",
+    progress: "未着手",
     note: "",
+    pinColor: DEFAULT_PIN_COLOR,
     lat: null,
     lng: null,
   };
@@ -156,7 +188,9 @@ function cloneRows(rows) {
       propertyName: row?.propertyName || "",
       companyRep: row?.companyRep || "",
       clientRep: row?.clientRep || "",
+      progress: normalizeProgress(row?.progress),
       note: row?.note || "",
+      pinColor: sanitizePinColor(row?.pinColor),
       lat: valid ? lat : null,
       lng: valid ? lng : null,
     };
@@ -236,6 +270,8 @@ function loadState() {
             companyRep: "",
             clientRep: "",
             note: pin.memo || "",
+            progress: "未着手",
+            pinColor: DEFAULT_PIN_COLOR,
             lat: pin.lat ?? null,
             lng: pin.lng ?? null,
           })),
@@ -518,10 +554,34 @@ function filledRows() {
   return state.rows.filter((row) => row.address.trim() || row.propertyName.trim());
 }
 
+function ensureImobileScript() {
+  if (document.querySelector(`script[src="${IMOBILE_SCRIPT}"]`)) return;
+  const script = document.createElement("script");
+  script.async = true;
+  script.src = IMOBILE_SCRIPT;
+  document.head.appendChild(script);
+}
+
+function mountImobileAd(container) {
+  if (!container) return;
+  const existing = document.getElementById(IMOBILE_SPOT.elementid);
+  if (existing) existing.remove();
+  container.replaceChildren();
+  const slot = document.createElement("div");
+  slot.id = IMOBILE_SPOT.elementid;
+  container.appendChild(slot);
+  ensureImobileScript();
+  (window.adsbyimobile = window.adsbyimobile || []).push({ ...IMOBILE_SPOT });
+}
+
+function restoreHomeAd() {
+  if (els.home?.hidden) return;
+  mountImobileAd(els.homeAd);
+}
+
 function withAd(action) {
   state.pendingAction = action;
-  const ad = ADS[Math.floor(Math.random() * ADS.length)];
-  els.adFrame.innerHTML = `<strong>${ad.title}</strong><p>${ad.body}</p>`;
+  mountImobileAd(els.adFrame);
   els.adContinue.disabled = true;
   let left = 3;
   els.adContinue.textContent = `あと ${left} 秒`;
@@ -541,6 +601,7 @@ function withAd(action) {
 
 function finishAd() {
   els.adDialog.close();
+  restoreHomeAd();
   const action = state.pendingAction;
   state.pendingAction = null;
   if (action) action();
@@ -551,6 +612,7 @@ function showHome() {
   els.home.hidden = false;
   els.workspace.hidden = true;
   refreshQuotaDisplay();
+  restoreHomeAd();
 }
 
 function showWorkspace() {
@@ -644,10 +706,16 @@ function renderSheet() {
     if (state.focusedRowId === row.id) tr.classList.add("is-focused");
     tr.innerHTML = `
       <td class="col-num" title="このピンを地図で見る">${index + 1}</td>
+      <td class="col-color">
+        <input type="color" class="pin-color" value="${escapeAttr(sanitizePinColor(row.pinColor))}" title="ピンの色" aria-label="ピンの色" />
+      </td>
       <td><textarea data-field="address" rows="2" placeholder="○○県○○市...">${escapeHtml(row.address)}</textarea></td>
       <td><textarea data-field="propertyName" rows="2" placeholder="○○ビル">${escapeHtml(row.propertyName)}</textarea></td>
       <td><textarea data-field="companyRep" rows="2" placeholder="△△">${escapeHtml(row.companyRep)}</textarea></td>
       <td><textarea data-field="clientRep" rows="2" placeholder="○○">${escapeHtml(row.clientRep)}</textarea></td>
+      <td class="col-progress">
+        <select data-field="progress" aria-label="進捗">${progressOptionsHtml(row.progress)}</select>
+      </td>
       <td><textarea data-field="note" rows="2">${escapeHtml(row.note)}</textarea></td>
       <td class="col-action"><button type="button" class="btn danger" data-delete>削除</button></td>
     `;
@@ -678,6 +746,17 @@ function renderSheet() {
         void handleSheetPaste(event, index, input.dataset.field);
       });
     });
+    tr.querySelector(".pin-color").addEventListener("input", (event) => {
+      event.stopPropagation();
+      row.pinColor = sanitizePinColor(event.target.value);
+      saveState();
+      syncMarkers();
+    });
+    tr.querySelector("[data-field=progress]").addEventListener("change", (event) => {
+      row.progress = normalizeProgress(event.target.value);
+      saveState();
+      syncMarkers();
+    });
     tr.querySelector("[data-delete]").addEventListener("click", (event) => {
       event.stopPropagation();
       state.rows = state.rows.filter((item) => item.id !== row.id);
@@ -688,7 +767,7 @@ function renderSheet() {
       syncMarkers();
     });
     tr.addEventListener("click", (event) => {
-      if (event.target.closest("textarea, button, input, label")) return;
+      if (event.target.closest("textarea, button, input, select, label")) return;
       focusRowPin(row);
     });
     els.sheetBody.appendChild(tr);
@@ -733,7 +812,7 @@ function escapeCsv(value) {
 
 function isHeaderRow(cells) {
   const text = cells.join("");
-  return ["住所", "物件名", "自社担当", "取引担当", "備考", "address", "name"].some((label) =>
+  return ["住所", "物件名", "自社担当", "取引担当", "進捗", "備考", "address", "name"].some((label) =>
     text.includes(label)
   );
 }
@@ -835,10 +914,14 @@ function applyExcelPaste(startRowIndex, startField, text) {
     const rowIndex = startRowIndex + offset;
     while (state.rows.length <= rowIndex) state.rows.push(emptyRow());
     const row = state.rows[rowIndex];
+    const pasteFields =
+      startField === "address" && cells.length >= 6
+        ? ["address", "propertyName", "companyRep", "clientRep", "progress", "note"]
+        : SHEET_FIELDS;
     cells.forEach((value, colOffset) => {
-      const field = SHEET_FIELDS[startCol + colOffset];
+      const field = pasteFields[startCol + colOffset];
       if (!field) return;
-      row[field] = value;
+      row[field] = field === "progress" ? normalizeProgress(value) : value;
       if (field === "address") {
         row.lat = null;
         row.lng = null;
@@ -862,10 +945,10 @@ function applyExcelPaste(startRowIndex, startField, text) {
   return true;
 }
 
-function createPinIcon() {
+function createPinIcon(color) {
   return L.divIcon({
     className: "",
-    html: `<div class="map-pin" style="background:#e03131"></div>`,
+    html: `<div class="map-pin" style="background:${sanitizePinColor(color)}"></div>`,
     iconSize: [22, 22],
     iconAnchor: [11, 22],
     popupAnchor: [0, -18],
@@ -874,7 +957,8 @@ function createPinIcon() {
 
 function popupHtml(row) {
   return `<strong>${escapeHtml(row.propertyName || row.address)}</strong><br>${escapeHtml(row.address)}
-    <br>自社: ${escapeHtml(row.companyRep || "-")} / 取引: ${escapeHtml(row.clientRep || "-")}`;
+    <br>自社: ${escapeHtml(row.companyRep || "-")} / 取引: ${escapeHtml(row.clientRep || "-")}
+    <br>進捗: ${escapeHtml(normalizeProgress(row.progress))}`;
 }
 
 function syncMarkers() {
@@ -891,12 +975,13 @@ function syncMarkers() {
     const existing = state.markers.get(row.id);
     if (existing) {
       existing.setLatLng([row.lat, row.lng]);
+      existing.setIcon(createPinIcon(row.pinColor));
       existing.setPopupContent(popupHtml(row));
       existing.off("click");
       existing.on("click", () => focusPinFromMap(row, existing));
       return;
     }
-    const marker = L.marker([row.lat, row.lng], { icon: createPinIcon() })
+    const marker = L.marker([row.lat, row.lng], { icon: createPinIcon(row.pinColor) })
       .addTo(state.map)
       .bindPopup(popupHtml(row));
     marker.on("click", () => focusPinFromMap(row, marker));
@@ -1134,7 +1219,7 @@ async function reverseGeocode(lat, lng) {
 }
 
 function toCsv() {
-  const header = ["名前", "位置", "住所", "物件名", "自社担当者", "取引担当者", "備考", "緯度", "経度"];
+  const header = ["名前", "位置", "住所", "物件名", "自社担当者", "取引担当者", "進捗", "備考", "ピン色", "緯度", "経度"];
   const rows = filledRows().map((row) =>
     [
       row.propertyName || row.address,
@@ -1143,7 +1228,9 @@ function toCsv() {
       row.propertyName,
       row.companyRep,
       row.clientRep,
+      normalizeProgress(row.progress),
       row.note,
+      sanitizePinColor(row.pinColor),
       row.lat ?? "",
       row.lng ?? "",
     ]
@@ -1161,10 +1248,19 @@ function toKml() {
         row.lat != null && row.lng != null
           ? `<Point><coordinates>${row.lng},${row.lat},0</coordinates></Point>`
           : "";
-      const description = [row.address, `自社担当: ${row.companyRep}`, `取引担当: ${row.clientRep}`, row.note]
+      const description = [
+        row.address,
+        `自社担当: ${row.companyRep}`,
+        `取引担当: ${row.clientRep}`,
+        `進捗: ${normalizeProgress(row.progress)}`,
+        row.note,
+      ]
         .filter(Boolean)
         .join("\n");
-      return `<Placemark><name>${escapeXml(row.propertyName || row.address)}</name><description>${escapeXml(description)}</description>${point}<address>${escapeXml(locationLabel(row))}</address></Placemark>`;
+      const styleId = `pin-${row.id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+      const color = sanitizePinColor(row.pinColor).slice(1);
+      const kmlColor = `ff${color.slice(4, 6)}${color.slice(2, 4)}${color.slice(0, 2)}`;
+      return `<Style id="${styleId}"><IconStyle><color>${kmlColor}</color></IconStyle></Style><Placemark><name>${escapeXml(row.propertyName || row.address)}</name><styleUrl>#${styleId}</styleUrl><description>${escapeXml(description)}</description>${point}<address>${escapeXml(locationLabel(row))}</address></Placemark>`;
     })
     .join("");
   return `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${escapeXml(name)}</name>${placemarks}</Document></kml>`;
@@ -1179,7 +1275,9 @@ function parseCsv(text) {
   const nameIdx = index(["物件名", "名前", "name"]);
   const companyIdx = index(["自社"]);
   const clientIdx = index(["取引"]);
+  const progressIdx = index(["進捗"]);
   const noteIdx = index(["備考", "説明"]);
+  const colorIdx = index(["ピン色", "色"]);
   const latIdx = index(["緯度", "lat"]);
   const lngIdx = index(["経度", "lng", "lon"]);
   return lines.slice(1).map((line) => {
@@ -1192,7 +1290,9 @@ function parseCsv(text) {
       propertyName: cells[nameIdx] || "",
       companyRep: cells[companyIdx] || "",
       clientRep: cells[clientIdx] || "",
+      progress: normalizeProgress(cells[progressIdx]),
       note: cells[noteIdx] || "",
+      pinColor: sanitizePinColor(cells[colorIdx]),
       lat: isValidLatLng(lat, lng) ? lat : null,
       lng: isValidLatLng(lat, lng) ? lng : null,
     };
@@ -1314,7 +1414,7 @@ function authHeaders() {
 async function upsertSpreadsheet(rows) {
   const title = state.mapName;
   const values = [
-    ["名前", "位置", "住所", "物件名", "自社担当者", "取引担当者", "備考", "緯度", "経度"],
+    ["名前", "位置", "住所", "物件名", "自社担当者", "取引担当者", "進捗", "備考", "ピン色", "緯度", "経度"],
     ...rows.map((row) => [
       row.propertyName || row.address,
       locationLabel(row),
@@ -1322,7 +1422,9 @@ async function upsertSpreadsheet(rows) {
       row.propertyName,
       row.companyRep,
       row.clientRep,
+      normalizeProgress(row.progress),
       row.note,
+      sanitizePinColor(row.pinColor),
       row.lat ?? "",
       row.lng ?? "",
     ]),
@@ -1495,7 +1597,7 @@ function bindEvents() {
       { address: "東京都千代田区丸の内1-9-1", propertyName: "東京駅", companyRep: "山田", clientRep: "佐藤", note: "サンプル", lat: 35.681236, lng: 139.767125 },
       { address: "大阪府大阪市北区梅田3-1-1", propertyName: "大阪駅", companyRep: "鈴木", clientRep: "高橋", note: "サンプル", lat: 34.702485, lng: 135.495951 },
     ];
-    samples.forEach((sample) => state.rows.unshift({ id: crypto.randomUUID(), ...sample }));
+    samples.forEach((sample) => state.rows.unshift({ ...emptyRow(), ...sample }));
     saveState();
     renderSheet();
     syncMarkers();
@@ -1528,6 +1630,7 @@ function bindEvents() {
   els.adDialog.addEventListener("cancel", () => {
     state.pendingAction = null;
     window.clearInterval(withAd.timer);
+    restoreHomeAd();
   });
   els.adContinue.addEventListener("click", finishAd);
   els.closeResult.addEventListener("click", () => {
@@ -1603,6 +1706,7 @@ function init() {
   loadGoogleMaps(getApiKey());
   window.setTimeout(setupGoogleAuth, 800);
   refreshQuotaDisplay();
+  restoreHomeAd();
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") refreshQuotaDisplay();
   });
