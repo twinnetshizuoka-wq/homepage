@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'online-only-dating',
+    title: '1度も会わずに交際する若者が増えている？',
+    date: '2026-09-11',
+    excerpt:
+      '一度も会わずに交際を始める若者が増えている背景について。オンライン出会いの合理性やコロナ禍の影響を考えます。',
+    href: 'blog/online-only-dating.html',
+    category: '考察',
+  },
+  {
     id: 'power-harassment-boss-check',
     title: 'パワハラ上司の素行調査',
     date: '2026-09-09',
