@@ -7,7 +7,7 @@ const DEFAULT_OAUTH_CLIENT_ID =
   "664582093232-q9cdpggq907t6qpm3sbfn5lqg8ks2hqi.apps.googleusercontent.com";
 const MYMAP_URL_KEY = "mymap-pin-app:mymap-url";
 const ACCOUNT_KEY = "mymap-pin-app:google-account";
-const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email";
+const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email";
 const DRIVE_DATA_NAME = "mymap-pin-app-data.json";
 const DRIVE_DATA_ID_KEY = "mymap-pin-app:drive-data-id";
 const LAYER_LIMIT = 1000;
@@ -326,20 +326,14 @@ function scheduleDriveSync() {
   if (!state.accessToken) return;
   window.clearTimeout(driveSyncTimer);
   driveSyncTimer = window.setTimeout(() => {
-    uploadDriveGroups().catch(() => {});
+    uploadServerGroups().catch(() => {});
   }, 1200);
 }
 
 function hasDriveScope(scopeText) {
   const text = String(scopeText || "");
   if (!text) return true;
-  return text.includes("drive.file") || text.includes("drive.appdata");
-}
-
-function hasAppDataScope(scopeText) {
-  const text = String(scopeText || "");
-  if (!text) return false;
-  return text.includes("drive.appdata");
+  return text.includes("drive.file") || text.includes("userinfo.email") || text.includes("email");
 }
 
 function mergeGroups(localGroups, cloudGroups) {
@@ -354,128 +348,8 @@ function mergeGroups(localGroups, cloudGroups) {
   return [...map.values()].sort((a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0));
 }
 
-function driveHeaders() {
+function cloudHeaders() {
   return { Authorization: `Bearer ${state.accessToken}` };
-}
-
-let lastDriveListError = "";
-
-async function listDriveDataFiles() {
-  if (!state.accessToken) return [];
-  const seen = new Map();
-  const errors = [];
-  for (const space of ["appDataFolder", "drive"]) {
-    const params = new URLSearchParams({
-      spaces: space,
-      pageSize: "20",
-      fields: "files(id,name,modifiedTime)",
-      q: `name = '${DRIVE_DATA_NAME}' and trashed = false`,
-    });
-    const response = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
-      headers: driveHeaders(),
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      errors.push(err.error?.message || String(response.status));
-      continue;
-    }
-    const data = await response.json().catch(() => ({}));
-    for (const file of data.files || []) {
-      if (file?.id) seen.set(file.id, { ...file, space });
-    }
-  }
-  if (![...seen.values()].some((file) => file.space === "appDataFolder")) {
-    const response = await fetch(
-      "https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&pageSize=20&fields=files(id,name,modifiedTime)",
-      { headers: driveHeaders() }
-    );
-    if (response.ok) {
-      const data = await response.json().catch(() => ({}));
-      for (const file of data.files || []) {
-        if (file?.id && (file.name === DRIVE_DATA_NAME || /mymap-pin-app/.test(file.name || ""))) {
-          seen.set(file.id, { ...file, space: "appDataFolder" });
-        }
-      }
-    }
-  }
-  lastDriveListError = errors.join(" / ");
-  return [...seen.values()];
-}
-
-async function findAppDataFileId() {
-  const files = await listDriveDataFiles();
-  return files.find((file) => file.space === "appDataFolder")?.id || "";
-}
-
-async function readDriveJson(fileId) {
-  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-    headers: driveHeaders(),
-  });
-  if (!response.ok) return null;
-  return response.json().catch(() => null);
-}
-
-async function downloadDriveGroups() {
-  const files = await listDriveDataFiles();
-  const ids = files.map((file) => file.id);
-  const stored = localStorage.getItem(DRIVE_DATA_ID_KEY);
-  if (stored && !ids.includes(stored)) ids.push(stored);
-  let merged = [];
-  let currentGroupId = null;
-  let latest = 0;
-  const seen = new Set();
-  for (const id of ids) {
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
-    const data = await readDriveJson(id);
-    if (!Array.isArray(data?.groups)) continue;
-    merged = mergeGroups(merged, data.groups);
-    const updated = Number(data.updatedAt) || 0;
-    if (updated >= latest) {
-      latest = updated;
-      currentGroupId = data.currentGroupId || currentGroupId;
-    }
-  }
-  const canonicalId = files.find((file) => file.space === "appDataFolder")?.id || files[0]?.id || stored || "";
-  if (canonicalId) localStorage.setItem(DRIVE_DATA_ID_KEY, canonicalId);
-  return {
-    groups: merged,
-    currentGroupId,
-    fileCount: seen.size,
-    foundFiles: files.length,
-  };
-}
-
-async function uploadDriveGroups() {
-  if (!state.accessToken) return false;
-  if (!savedGroups().length && !state.groups.length) return false;
-  const payload = JSON.stringify({
-    currentGroupId: state.currentGroupId,
-    groups: state.groups,
-    updatedAt: Date.now(),
-  });
-  const existing = await findAppDataFileId();
-  const metadata = existing
-    ? { name: DRIVE_DATA_NAME, mimeType: "application/json" }
-    : { name: DRIVE_DATA_NAME, mimeType: "application/json", parents: ["appDataFolder"] };
-  const form = new FormData();
-  form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
-  form.append("file", new Blob([payload], { type: "application/json" }));
-  const endpoint = existing
-    ? `https://www.googleapis.com/upload/drive/v3/files/${existing}?uploadType=multipart`
-    : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
-  const response = await fetch(endpoint, {
-    method: existing ? "PATCH" : "POST",
-    headers: driveHeaders(),
-    body: form,
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok || !data.id) {
-    toast("Googleドライブへの保存に失敗しました。許可画面でドライブを許可して、もう一度同期してください", 5000);
-    return false;
-  }
-  localStorage.setItem(DRIVE_DATA_ID_KEY, data.id);
-  return true;
 }
 
 function applySyncedGroups() {
@@ -488,12 +362,46 @@ function applySyncedGroups() {
   if (els.groupsDialog?.open) renderGroups();
 }
 
+async function downloadServerGroups() {
+  const response = await fetch("/api/groups", { headers: cloudHeaders() });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return { error: data.error || `保存サーバーエラー ${response.status}`, groups: [] };
+  }
+  return {
+    groups: Array.isArray(data.groups) ? data.groups : [],
+    currentGroupId: data.currentGroupId || null,
+  };
+}
+
+async function uploadServerGroups() {
+  if (!state.accessToken) return false;
+  const response = await fetch("/api/groups", {
+    method: "PUT",
+    headers: { ...cloudHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      currentGroupId: state.currentGroupId,
+      groups: state.groups,
+      updatedAt: Date.now(),
+    }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    toast(data.error || "グループの保存に失敗しました", 5000);
+    return false;
+  }
+  return true;
+}
+
 async function syncFromDrive() {
   if (!state.accessToken) return false;
-  toast("Googleドライブと同期しています…");
-  const cloud = await downloadDriveGroups();
-  const cloudCount = cloud.groups.length;
-  if (cloudCount) {
+  toast("グループを同期しています…");
+  const cloud = await downloadServerGroups();
+  if (cloud.error) {
+    toast(cloud.error, 5000);
+    return false;
+  }
+  if (cloud.groups.length) {
     state.groups = mergeGroups(state.groups, cloud.groups);
     if (cloud.currentGroupId && state.groups.some((group) => group.id === cloud.currentGroupId)) {
       state.currentGroupId = cloud.currentGroupId;
@@ -501,21 +409,17 @@ async function syncFromDrive() {
       state.currentGroupId = state.groups[0]?.id || null;
     }
     applySyncedGroups();
-    await uploadDriveGroups();
-    toast(`${savedGroups().length}件のグループを同期しました`, 5000);
-    return true;
+    const uploaded = await uploadServerGroups();
+    if (uploaded) toast(`${savedGroups().length}件のグループを同期しました`, 5000);
+    return uploaded;
   }
   if (savedGroups().length) {
     applySyncedGroups();
-    const uploaded = await uploadDriveGroups();
-    if (uploaded) toast(`この端末の${savedGroups().length}件を Googleドライブに保存しました`, 5000);
+    const uploaded = await uploadServerGroups();
+    if (uploaded) toast(`この端末の${savedGroups().length}件を保存しました。他の端末でも再同期してください`, 5000);
     return uploaded;
   }
-  if (lastDriveListError) {
-    toast("ドライブを読めませんでした。もう一度「Googleと再同期」を押し、新しい許可を承認してください", 5000);
-    return false;
-  }
-  toast("ドライブにグループはまだありません。グループがある端末で先に再同期してください", 5000);
+  toast("保存されたグループはまだありません。グループがある端末で先に再同期してください", 5000);
   return true;
 }
 
@@ -1915,22 +1819,6 @@ function setupGoogleAuth() {
         finishDriveAuth(false);
         return;
       }
-      if ((!hasDriveScope(response.scope) || !hasAppDataScope(response.scope)) && !driveConsentRetry) {
-        driveConsentRetry = true;
-        toast("グループ共有用の新しい許可が必要です。次の画面でドライブを許可してください", 5000);
-        state.tokenClient.requestAccessToken({
-          prompt: "consent",
-          hint: getRegisteredEmail() || els.accountEmail?.value || "",
-        });
-        return;
-      }
-      driveConsentRetry = false;
-      if (!hasDriveScope(response.scope) && !hasAppDataScope(response.scope)) {
-        state.accessToken = "";
-        if (!silent) toast("Googleドライブが許可されませんでした。チェックを外さずに許可してください");
-        finishDriveAuth(false);
-        return;
-      }
       state.accessToken = response.access_token;
       const me = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
         headers: { Authorization: `Bearer ${state.accessToken}` },
@@ -1997,7 +1885,7 @@ function requestGoogleSignIn(options = {}) {
   const hint = getRegisteredEmail() || els.accountEmail?.value || "";
   const request = { hint, include_granted_scopes: true };
   if (options.silent) request.prompt = "";
-  else if (options.forcePrompt) request.prompt = "consent";
+  else if (options.forcePrompt) request.prompt = "select_account";
   state.tokenClient.requestAccessToken(request);
 }
 
