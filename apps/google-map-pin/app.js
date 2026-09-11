@@ -366,7 +366,7 @@ async function downloadServerGroups() {
   const response = await fetch("/api/groups", { headers: cloudHeaders() });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    return { error: data.error || `保存サーバーエラー ${response.status}`, groups: [] };
+    return { error: [data.error || `保存サーバーエラー ${response.status}`, data.detail].filter(Boolean).join(" "), groups: [] };
   }
   return {
     groups: Array.isArray(data.groups) ? data.groups : [],
@@ -387,7 +387,7 @@ async function uploadServerGroups() {
   });
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    toast(data.error || "グループの保存に失敗しました", 5000);
+    toast([data.error, data.detail].filter(Boolean).join(" "), 6000);
     return false;
   }
   return true;

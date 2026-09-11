@@ -1,6 +1,7 @@
 const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "";
 const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "";
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN || "";
+const BLOB_NAME = "mymap-pin-groups.json";
 
 function kvEnabled() {
   return Boolean(KV_URL && KV_TOKEN);
@@ -31,8 +32,8 @@ function groupsKey(email) {
   return `mymap-pin-groups:${email}`;
 }
 
-function blobName(email) {
-  return `mymap-pin-groups/${email.replace(/[^a-z0-9._-]+/gi, "_")}.json`;
+function blobStoreId() {
+  return String(BLOB_TOKEN).split("_")[3] || "";
 }
 
 function normalizeRecord(data) {
@@ -52,7 +53,7 @@ async function kvCommand(args) {
     },
     body: JSON.stringify(args),
   });
-  if (!response.ok) throw new Error("groups store unavailable");
+  if (!response.ok) throw new Error(`kv ${response.status}`);
   const data = await response.json();
   if (data.error) throw new Error(String(data.error));
   return data.result;
@@ -68,40 +69,89 @@ async function writeGroupsKv(email, record) {
   await kvCommand(["SET", groupsKey(email), JSON.stringify(record)]);
 }
 
-async function blobGet(email) {
-  return fetch(`https://blob.vercel-storage.com/${blobName(email)}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${BLOB_TOKEN}`,
-      "x-api-version": "7",
-    },
-  });
-}
-
-async function blobPut(email, body) {
-  return fetch(`https://blob.vercel-storage.com/${blobName(email)}`, {
+async function blobPut(body) {
+  const storeId = blobStoreId();
+  const headers = {
+    Authorization: `Bearer ${BLOB_TOKEN}`,
+    "x-api-version": "12",
+    "x-vercel-blob-access": "private",
+    "x-allow-overwrite": "1",
+    "x-add-random-suffix": "0",
+    "x-content-type": "application/json",
+  };
+  if (storeId) headers["x-vercel-blob-store-id"] = storeId;
+  const response = await fetch(
+    `https://vercel.com/api/blob/?pathname=${encodeURIComponent(BLOB_NAME)}`,
+    { method: "PUT", headers, body }
+  );
+  if (response.ok) return response;
+  const legacy = await fetch(`https://blob.vercel-storage.com/${BLOB_NAME}`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${BLOB_TOKEN}`,
       "x-api-version": "7",
-      "x-content-type": "application/json",
+      "x-vercel-blob-access": "private",
+      "x-allow-overwrite": "1",
       "x-add-random-suffix": "0",
-      "x-allow-overwrite": "true",
+      "x-content-type": "application/json",
     },
     body,
   });
+  return legacy.ok ? legacy : response;
+}
+
+async function blobGet() {
+  const storeId = blobStoreId();
+  const urls = [];
+  if (storeId) {
+    urls.push(
+      `https://${storeId}.private.blob.vercel-storage.com/${BLOB_NAME}?cache=0`
+    );
+    urls.push(`https://${storeId}.public.blob.vercel-storage.com/${BLOB_NAME}`);
+  }
+  urls.push(`https://blob.vercel-storage.com/${BLOB_NAME}`);
+  let last = null;
+  for (const url of urls) {
+    last = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${BLOB_TOKEN}`,
+        "x-api-version": "12",
+      },
+    });
+    if (last.ok || last.status === 404) return last;
+  }
+  return last;
+}
+
+async function readAllGroupsBlob() {
+  const response = await blobGet();
+  if (!response || response.status === 404) return {};
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`blob get ${response.status} ${detail.slice(0, 120)}`);
+  }
+  const data = await response.json().catch(() => ({}));
+  return data && typeof data === "object" ? data : {};
+}
+
+async function writeAllGroupsBlob(store) {
+  const response = await blobPut(JSON.stringify(store));
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`blob put ${response.status} ${detail.slice(0, 120)}`);
+  }
 }
 
 async function readGroupsBlob(email) {
-  const response = await blobGet(email);
-  if (response.status === 404) return normalizeRecord({ groups: [] });
-  if (!response.ok) throw new Error("groups store unavailable");
-  return normalizeRecord(await response.json());
+  const store = await readAllGroupsBlob();
+  return normalizeRecord(store[email]);
 }
 
 async function writeGroupsBlob(email, record) {
-  const response = await blobPut(email, JSON.stringify(record));
-  if (!response.ok) throw new Error("groups store unavailable");
+  const store = await readAllGroupsBlob();
+  store[email] = record;
+  await writeAllGroupsBlob(store);
 }
 
 export function groupsStoreReady() {
@@ -109,20 +159,42 @@ export function groupsStoreReady() {
 }
 
 export async function readGroups(email) {
-  if (kvEnabled()) return readGroupsKv(email);
-  if (blobEnabled()) return readGroupsBlob(email);
-  throw new Error("groups store unavailable");
+  const errors = [];
+  if (blobEnabled()) {
+    try {
+      return await readGroupsBlob(email);
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : "blob read failed");
+    }
+  }
+  if (kvEnabled()) {
+    try {
+      return await readGroupsKv(email);
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : "kv read failed");
+    }
+  }
+  throw new Error(errors.join(" / ") || "groups store unavailable");
 }
 
 export async function writeGroups(email, input) {
   const record = normalizeRecord(input);
-  if (kvEnabled()) {
-    await writeGroupsKv(email, record);
-    return record;
-  }
+  const errors = [];
   if (blobEnabled()) {
-    await writeGroupsBlob(email, record);
-    return record;
+    try {
+      await writeGroupsBlob(email, record);
+      return record;
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : "blob write failed");
+    }
   }
-  throw new Error("groups store unavailable");
+  if (kvEnabled()) {
+    try {
+      await writeGroupsKv(email, record);
+      return record;
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : "kv write failed");
+    }
+  }
+  throw new Error(errors.join(" / ") || "groups store unavailable");
 }

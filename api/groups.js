@@ -43,7 +43,11 @@ export default async function handler(req, res) {
       return;
     }
     res.status(405).json({ error: "method not allowed" });
-  } catch {
-    res.status(503).json({ error: "グループの保存に失敗しました。時間をおいて再度お試しください" });
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : "unknown";
+    res.status(503).json({
+      error: "グループの保存に失敗しました。時間をおいて再度お試しください",
+      detail,
+    });
   }
 }
