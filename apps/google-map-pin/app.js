@@ -686,6 +686,44 @@ function isAdOverlayOpen() {
   return Boolean(els.adDialog) && !els.adDialog.hidden;
 }
 
+function naturalAdWidth(iframe) {
+  const attr = Number(iframe.getAttribute("width"));
+  if (attr > 0) return attr;
+  const styleW = parseFloat(iframe.style.width);
+  if (styleW > 0) return styleW;
+  return iframe.offsetWidth || 320;
+}
+
+function fitLiveAd() {
+  const host = els.homeAd;
+  if (!host) return;
+  const iframe = host.querySelector("iframe");
+  if (!iframe) return;
+  iframe.style.transform = "";
+  const avail = host.clientWidth;
+  const natural = naturalAdWidth(iframe);
+  if (!avail || natural <= avail + 1) {
+    iframe.style.transformOrigin = "";
+    host.style.height = "";
+    return;
+  }
+  const scale = avail / natural;
+  iframe.style.transformOrigin = "top left";
+  iframe.style.transform = `scale(${scale})`;
+  const naturalH = Number(iframe.getAttribute("height")) || iframe.offsetHeight || 100;
+  host.style.height = `${Math.ceil(naturalH * scale)}px`;
+}
+
+function watchLiveAd() {
+  if (!els.homeAd || watchLiveAd.bound) return;
+  watchLiveAd.bound = true;
+  const mo = new MutationObserver(() => window.requestAnimationFrame(fitLiveAd));
+  mo.observe(els.homeAd, { childList: true, subtree: true });
+  els.homeAd.addEventListener("load", fitLiveAd, true);
+  window.setTimeout(fitLiveAd, 400);
+  window.setTimeout(fitLiveAd, 1200);
+}
+
 function clearLiveAdPinStyles() {
   if (!els.adSlot) return;
   els.adSlot.style.top = "";
@@ -704,6 +742,7 @@ function unparkLiveAd() {
   if (!els.adSlot) return;
   els.adSlot.classList.remove("is-parked", "is-pinned");
   clearLiveAdPinStyles();
+  window.requestAnimationFrame(fitLiveAd);
 }
 
 function pinLiveAdToOverlay() {
@@ -715,6 +754,7 @@ function pinLiveAdToOverlay() {
   els.adSlot.style.top = `${Math.round(rect.top)}px`;
   els.adSlot.style.left = `${Math.round(rect.left)}px`;
   els.adSlot.style.width = `${Math.round(rect.width)}px`;
+  window.requestAnimationFrame(fitLiveAd);
   return true;
 }
 
@@ -2206,6 +2246,7 @@ function bindEvents() {
   els.adContinue.addEventListener("click", finishAd);
   window.addEventListener("resize", () => {
     if (isAdOverlayOpen()) pinLiveAdToOverlay();
+    else fitLiveAd();
   });
   els.closeResult.addEventListener("click", () => {
     els.resultDialog.close();
@@ -2286,6 +2327,7 @@ function init() {
     if (getRegisteredEmail()) void ensureDriveSession({ silent: true });
   }, 800);
   refreshQuotaDisplay();
+  watchLiveAd();
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") refreshQuotaDisplay();
   });
