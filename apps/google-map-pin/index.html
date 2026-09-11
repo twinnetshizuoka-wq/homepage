@@ -264,9 +264,9 @@
       </div>
     </dialog>
 
-    <dialog id="ad-dialog" class="ad-dialog">
-      <div class="dialog-card ad-card">
-        <p class="ad-kicker">スポンサー広告</p>
+    <div id="ad-dialog" class="ad-overlay" hidden>
+      <div class="dialog-card ad-card" role="dialog" aria-modal="true" aria-labelledby="ad-kicker">
+        <p class="ad-kicker" id="ad-kicker">スポンサー広告</p>
         <div class="ad-frame" id="ad-frame"></div>
         <p class="ad-caption">操作の前に広告が表示されます。</p>
         <div class="form-actions">
@@ -275,7 +275,7 @@
           </button>
         </div>
       </div>
-    </dialog>
+    </div>
 
     <dialog id="account-dialog">
       <div class="dialog-card">

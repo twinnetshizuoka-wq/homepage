@@ -685,23 +685,23 @@ function requestImobileAd() {
   (window.adsbyimobile = window.adsbyimobile || []).push({ ...getImobileSpot() });
 }
 
-function mountImobileAd(container) {
-  if (!container) return;
-  const spot = getImobileSpot();
-  const existing = document.getElementById(spot.elementid);
-  if (existing) {
-    if (!container.contains(existing)) {
-      container.replaceChildren();
-      container.appendChild(existing);
-    }
-    return;
-  }
+function clearImobileSlots() {
   [IMOBILE_SPOT_PC.elementid, IMOBILE_SPOT_SP.elementid].forEach((id) => {
     document.getElementById(id)?.remove();
   });
+}
+
+function mountImobileAd(container) {
+  if (!container) return;
+  const spot = getImobileSpot();
+  clearImobileSlots();
   container.replaceChildren();
   const slot = document.createElement("div");
   slot.id = spot.elementid;
+  if (isSmartphone()) {
+    slot.style.minWidth = "320px";
+    slot.style.minHeight = "100px";
+  }
   container.appendChild(slot);
   requestImobileAd();
 }
@@ -711,13 +711,41 @@ function restoreHomeAd() {
   mountImobileAd(els.homeAd);
 }
 
+function isAdOverlayOpen() {
+  return Boolean(els.adDialog) && !els.adDialog.hidden;
+}
+
+function openAdOverlay() {
+  document.body.classList.add("ad-open");
+  els.adDialog.hidden = false;
+}
+
+function closeAdOverlay() {
+  document.body.classList.remove("ad-open");
+  els.adDialog.hidden = true;
+}
+
+function dismissAdOverlay() {
+  window.clearInterval(withAd.timer);
+  closeAdOverlay();
+  restoreHomeAd();
+}
+
 function withAd(action) {
   state.pendingAction = action;
-  mountImobileAd(els.adFrame);
   els.adContinue.disabled = true;
   let left = 3;
   els.adContinue.textContent = `あと ${left} 秒`;
-  els.adDialog.showModal();
+  openAdOverlay();
+  const mountWhenVisible = () => {
+    if (!isAdOverlayOpen()) return;
+    if (els.adFrame.getBoundingClientRect().width > 0) {
+      mountImobileAd(els.adFrame);
+      return;
+    }
+    window.setTimeout(mountWhenVisible, 50);
+  };
+  window.requestAnimationFrame(() => window.requestAnimationFrame(mountWhenVisible));
   window.clearInterval(withAd.timer);
   withAd.timer = window.setInterval(() => {
     left -= 1;
@@ -732,8 +760,7 @@ function withAd(action) {
 }
 
 function finishAd() {
-  els.adDialog.close();
-  restoreHomeAd();
+  dismissAdOverlay();
   const action = state.pendingAction;
   state.pendingAction = null;
   if (action) action();
@@ -2165,11 +2192,10 @@ function bindEvents() {
   els.shrinkMap.addEventListener("click", exitMapFullscreen);
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && state.mapFullscreen) exitMapFullscreen();
-  });
-  els.adDialog.addEventListener("cancel", () => {
-    state.pendingAction = null;
-    window.clearInterval(withAd.timer);
-    restoreHomeAd();
+    if (event.key === "Escape" && isAdOverlayOpen()) {
+      state.pendingAction = null;
+      dismissAdOverlay();
+    }
   });
   els.adContinue.addEventListener("click", finishAd);
   els.closeResult.addEventListener("click", () => {
