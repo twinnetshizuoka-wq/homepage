@@ -16,7 +16,7 @@ export const projects = [
   {
     id: 'google-map-pin',
     title: 'GoogleMapピン刺しアプリ',
-    features: ['GoogleMap連携', 'ピン刺し', '位置情報の可視化'],
+    features: ['GoogleMap連携', 'ピン刺し', '営業管理ツール'],
     href: 'google-map-pin.html',
     icon: '📍',
   },
