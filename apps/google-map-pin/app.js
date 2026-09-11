@@ -15,7 +15,7 @@ const SHEET_FIELDS = ["address", "propertyName", "companyRep", "clientRep", "not
 const DEFAULT_PIN_COLOR = "#e03131";
 const PROGRESS_OPTIONS = ["未着手", "対応中", "完了", "保留"];
 const IMOBILE_SCRIPT = "https://imp-adedge.i-mobile.co.jp/script/v1/spot.js?20220104";
-const IMOBILE_SPOT = {
+const IMOBILE_SPOT_PC = {
   pid: 85422,
   mid: 596245,
   asid: 1943777,
@@ -23,6 +23,22 @@ const IMOBILE_SPOT = {
   display: "inline",
   elementid: "im-9487a01bf63f48a2b6e8d2d76a891f76",
 };
+const IMOBILE_SPOT_SP = {
+  pid: 85422,
+  mid: 596198,
+  asid: 1943778,
+  type: "banner",
+  display: "inline",
+  elementid: "im-6301f748d22642799a44fbc7353c2d79",
+};
+
+function isSmartphone() {
+  return /Android.+Mobile|iPhone|iPod/i.test(navigator.userAgent);
+}
+
+function getImobileSpot() {
+  return isSmartphone() ? IMOBILE_SPOT_SP : IMOBILE_SPOT_PC;
+}
 
 const state = {
   mapName: "",
@@ -579,27 +595,31 @@ function ensureImobileScript() {
 
 function requestImobileAd() {
   ensureImobileScript();
-  (window.adsbyimobile = window.adsbyimobile || []).push({ ...IMOBILE_SPOT });
+  (window.adsbyimobile = window.adsbyimobile || []).push({ ...getImobileSpot() });
 }
 
 function mountImobileAd(container) {
   if (!container) return;
-  const existing = document.getElementById(IMOBILE_SPOT.elementid);
+  const spot = getImobileSpot();
+  const existing = document.getElementById(spot.elementid);
   if (existing && container.contains(existing)) {
     requestImobileAd();
     return;
   }
-  if (existing) existing.remove();
+  [IMOBILE_SPOT_PC.elementid, IMOBILE_SPOT_SP.elementid].forEach((id) => {
+    document.getElementById(id)?.remove();
+  });
   container.replaceChildren();
   const slot = document.createElement("div");
-  slot.id = IMOBILE_SPOT.elementid;
+  slot.id = spot.elementid;
   container.appendChild(slot);
   requestImobileAd();
 }
 
 function restoreHomeAd() {
   if (els.home?.hidden) return;
-  const existing = document.getElementById(IMOBILE_SPOT.elementid);
+  const spot = getImobileSpot();
+  const existing = document.getElementById(spot.elementid);
   if (existing && els.homeAd?.contains(existing) && existing.childElementCount > 0) return;
   mountImobileAd(els.homeAd);
 }

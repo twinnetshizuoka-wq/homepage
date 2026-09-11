@@ -818,6 +818,15 @@ dialog::backdrop {
 }
 
 @media (max-width: 980px) {
+  .ad-slot {
+    width: min(640px, calc(100vw - 32px));
+  }
+
+  .ad-frame,
+  #home-ad {
+    min-height: 100px;
+  }
+
   .workspace,
   .workspace.map-open {
     grid-template-columns: 1fr;
