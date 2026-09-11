@@ -722,6 +722,15 @@ body.map-fullscreen {
   border-radius: 999px;
 }
 
+.pin-popup-search {
+  max-width: min(280px, 72vw);
+  word-break: break-word;
+}
+
+.pin-popup-register {
+  padding: 6px 14px;
+}
+
 .pin-popup-nav {
   background: var(--leaf);
   color: #fff;

@@ -63,6 +63,7 @@ const state = {
   markers: new Map(),
   locationMarker: null,
   searchMarker: null,
+  searchResult: null,
   mapReady: false,
   googleReady: false,
   geocoder: null,
@@ -1236,13 +1237,26 @@ function bindPinPopupActions(popup) {
   if (deleteButton) L.DomEvent.disableClickPropagation(deleteButton);
   const navLink = root.querySelector("[data-nav-pin]");
   if (navLink) L.DomEvent.disableClickPropagation(navLink);
+  const registerButton = root.querySelector("[data-register-search]");
+  if (registerButton) L.DomEvent.disableClickPropagation(registerButton);
 }
 
 function bindGlobalPinPopupClicks() {
   if (bindGlobalPinPopupClicks.done) return;
   bindGlobalPinPopupClicks.done = true;
   let lastDelete = 0;
+  let lastRegister = 0;
   const handler = (event) => {
+    const registerButton = event.target.closest?.("[data-register-search]");
+    if (registerButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const now = Date.now();
+      if (now - lastRegister < 400) return;
+      lastRegister = now;
+      void registerSearchPin();
+      return;
+    }
     const deleteButton = event.target.closest?.("[data-delete-pin]");
     if (!deleteButton) return;
     event.preventDefault();
@@ -1345,18 +1359,82 @@ function createSearchIcon() {
   });
 }
 
-function showPointOnMap(lat, lng, label, kind) {
+function searchPopupHtml(label) {
+  return `<div class="pin-popup pin-popup-search">
+      <div>${escapeHtml(label)}</div>
+      <div class="pin-popup-actions">
+        <button type="button" class="btn compact primary pin-popup-register" data-register-search>登録</button>
+      </div>
+    </div>`;
+}
+
+function clearSearchMarker() {
+  if (state.searchMarker) {
+    state.searchMarker.closePopup();
+    state.searchMarker.remove();
+    state.searchMarker = null;
+  }
+  state.searchResult = null;
+}
+
+async function registerSearchPin() {
+  if (registerSearchPin.busy) return;
+  const found = state.searchResult;
+  if (!found || !isValidLatLng(found.lat, found.lng)) {
+    toast("登録する場所がありません");
+    return;
+  }
+  if (filledRows().length >= LAYER_LIMIT) {
+    toast(`1グループは最大${LAYER_LIMIT}件です`);
+    return;
+  }
+  registerSearchPin.busy = true;
+  toast("登録しています…");
+  try {
+    let address = found.label || "";
+    try {
+      address = await reverseGeocode(found.lat, found.lng);
+    } catch {
+      address = found.label || address;
+    }
+    const query = String(found.query || "").trim();
+    const blank = state.rows.find((row) => !row.address.trim() && !row.propertyName.trim());
+    const row = blank || emptyRow();
+    row.address = address;
+    row.propertyName = query || row.propertyName || address.split(/[,\s]/)[0] || "";
+    row.lat = found.lat;
+    row.lng = found.lng;
+    row.pinColor = DEFAULT_PIN_COLOR;
+    if (!blank) state.rows.push(row);
+    clearSearchMarker();
+    saveState();
+    renderSheet();
+    syncMarkers();
+    const marker = state.markers.get(row.id);
+    focusPinFromMap(row, marker);
+    toast("表に追加してピンを刺しました");
+  } finally {
+    registerSearchPin.busy = false;
+  }
+}
+
+function showPointOnMap(lat, lng, label, kind, query) {
   if (!state.mapReady) initMap();
   const markerKey = kind === "location" ? "locationMarker" : "searchMarker";
   const icon = kind === "location" ? createLocationIcon() : createSearchIcon();
+  const content =
+    kind === "search" ? searchPopupHtml(label) : escapeHtml(label);
+  if (kind === "search") {
+    state.searchResult = { lat, lng, label, query: query || "" };
+  }
   if (state[markerKey]) {
     state[markerKey].setLatLng([lat, lng]);
     state[markerKey].setIcon(icon);
-    state[markerKey].setPopupContent(escapeHtml(label));
+    state[markerKey].setPopupContent(content);
   } else {
     state[markerKey] = L.marker([lat, lng], { icon, zIndexOffset: 1200 })
       .addTo(state.map)
-      .bindPopup(escapeHtml(label));
+      .bindPopup(content);
   }
   state.map.setView([lat, lng], Math.max(state.map.getZoom() || 0, 15));
   state[markerKey].openPopup();
@@ -1415,7 +1493,7 @@ async function searchMapPlace(query) {
     toast("場所が見つかりませんでした");
     return;
   }
-  showPointOnMap(found.lat, found.lng, found.label, "search");
+  showPointOnMap(found.lat, found.lng, found.label, "search", text);
   toast("場所を表示しました");
 }
 
