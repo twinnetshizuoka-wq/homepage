@@ -120,6 +120,9 @@ const els = {
   adDialog: document.getElementById("ad-dialog"),
   adFrame: document.getElementById("ad-frame"),
   homeAd: document.getElementById("home-ad"),
+  adSlot: document.getElementById("live-ad-slot"),
+  homeLead: document.getElementById("home-lead"),
+  homeRest: document.getElementById("home-rest"),
   adContinue: document.getElementById("ad-continue"),
   settingsDialog: document.getElementById("settings-dialog"),
   settingsForm: document.getElementById("settings-form"),
@@ -672,47 +675,40 @@ function filledRows() {
   return state.rows.filter((row) => row.address.trim() || row.propertyName.trim());
 }
 
-function ensureImobileScript() {
-  if (document.querySelector(`script[src="${IMOBILE_SCRIPT}"]`)) return;
-  const script = document.createElement("script");
-  script.async = true;
-  script.src = IMOBILE_SCRIPT;
-  document.head.appendChild(script);
-}
-
-function requestImobileAd() {
-  ensureImobileScript();
-  (window.adsbyimobile = window.adsbyimobile || []).push({ ...getImobileSpot() });
-}
-
-function clearImobileSlots() {
-  [IMOBILE_SPOT_PC.elementid, IMOBILE_SPOT_SP.elementid].forEach((id) => {
-    document.getElementById(id)?.remove();
-  });
-}
-
-function mountImobileAd(container) {
-  if (!container) return;
-  const spot = getImobileSpot();
-  clearImobileSlots();
-  container.replaceChildren();
-  const slot = document.createElement("div");
-  slot.id = spot.elementid;
-  if (isSmartphone()) {
-    slot.style.minWidth = "320px";
-    slot.style.minHeight = "100px";
-  }
-  container.appendChild(slot);
-  requestImobileAd();
-}
-
-function restoreHomeAd() {
-  if (els.home?.hidden) return;
-  mountImobileAd(els.homeAd);
-}
-
 function isAdOverlayOpen() {
   return Boolean(els.adDialog) && !els.adDialog.hidden;
+}
+
+function clearLiveAdPinStyles() {
+  if (!els.adSlot) return;
+  els.adSlot.style.top = "";
+  els.adSlot.style.left = "";
+  els.adSlot.style.width = "";
+}
+
+function parkLiveAd() {
+  if (!els.adSlot) return;
+  els.adSlot.classList.remove("is-pinned");
+  clearLiveAdPinStyles();
+  els.adSlot.classList.add("is-parked");
+}
+
+function unparkLiveAd() {
+  if (!els.adSlot) return;
+  els.adSlot.classList.remove("is-parked", "is-pinned");
+  clearLiveAdPinStyles();
+}
+
+function pinLiveAdToOverlay() {
+  if (!els.adSlot || !els.adFrame || !isAdOverlayOpen()) return false;
+  const rect = els.adFrame.getBoundingClientRect();
+  if (rect.width <= 0) return false;
+  els.adSlot.classList.remove("is-parked");
+  els.adSlot.classList.add("is-pinned");
+  els.adSlot.style.top = `${Math.round(rect.top)}px`;
+  els.adSlot.style.left = `${Math.round(rect.left)}px`;
+  els.adSlot.style.width = `${Math.round(rect.width)}px`;
+  return true;
 }
 
 function openAdOverlay() {
@@ -721,6 +717,8 @@ function openAdOverlay() {
 }
 
 function closeAdOverlay() {
+  if (els.home?.classList.contains("is-away")) parkLiveAd();
+  else unparkLiveAd();
   document.body.classList.remove("ad-open");
   els.adDialog.hidden = true;
 }
@@ -728,7 +726,6 @@ function closeAdOverlay() {
 function dismissAdOverlay() {
   window.clearInterval(withAd.timer);
   closeAdOverlay();
-  restoreHomeAd();
 }
 
 function withAd(action) {
@@ -737,15 +734,12 @@ function withAd(action) {
   let left = 3;
   els.adContinue.textContent = `あと ${left} 秒`;
   openAdOverlay();
-  const mountWhenVisible = () => {
+  const pinWhenVisible = () => {
     if (!isAdOverlayOpen()) return;
-    if (els.adFrame.getBoundingClientRect().width > 0) {
-      mountImobileAd(els.adFrame);
-      return;
-    }
-    window.setTimeout(mountWhenVisible, 50);
+    if (pinLiveAdToOverlay()) return;
+    window.setTimeout(pinWhenVisible, 50);
   };
-  window.requestAnimationFrame(() => window.requestAnimationFrame(mountWhenVisible));
+  window.requestAnimationFrame(() => window.requestAnimationFrame(pinWhenVisible));
   window.clearInterval(withAd.timer);
   withAd.timer = window.setInterval(() => {
     left -= 1;
@@ -768,14 +762,19 @@ function finishAd() {
 
 function showHome() {
   hideMap();
-  els.home.hidden = false;
+  els.home.classList.remove("is-away");
+  if (els.homeLead) els.homeLead.hidden = false;
+  if (els.homeRest) els.homeRest.hidden = false;
   els.workspace.hidden = true;
+  unparkLiveAd();
   refreshQuotaDisplay();
-  restoreHomeAd();
 }
 
 function showWorkspace() {
-  els.home.hidden = true;
+  parkLiveAd();
+  els.home.classList.add("is-away");
+  if (els.homeLead) els.homeLead.hidden = true;
+  if (els.homeRest) els.homeRest.hidden = true;
   els.workspace.hidden = false;
   els.mapName.value = state.mapName;
   setLocationMode(state.locationMode);
@@ -2198,6 +2197,9 @@ function bindEvents() {
     }
   });
   els.adContinue.addEventListener("click", finishAd);
+  window.addEventListener("resize", () => {
+    if (isAdOverlayOpen()) pinLiveAdToOverlay();
+  });
   els.closeResult.addEventListener("click", () => {
     els.resultDialog.close();
     showMap();
@@ -2277,7 +2279,6 @@ function init() {
     if (getRegisteredEmail()) void ensureDriveSession({ silent: true });
   }, 800);
   refreshQuotaDisplay();
-  restoreHomeAd();
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") refreshQuotaDisplay();
   });

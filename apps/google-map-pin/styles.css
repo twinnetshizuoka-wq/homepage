@@ -824,8 +824,47 @@ dialog::backdrop {
   box-shadow: var(--shadow);
 }
 
-body.ad-open {
+.home.is-away {
+  flex: 0 0 auto;
+  padding: 0;
+  gap: 0;
+  min-height: 0;
+}
+
+.home-rest {
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+}
+
+.ad-slot.is-parked {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 0;
+  width: min(728px, calc(100vw - 48px));
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ad-slot.is-pinned {
+  position: fixed;
+  z-index: 3100;
+  margin: 0;
+  pointer-events: auto;
+}
+
+.ad-slot.is-pinned .ad-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.ad-overlay .ad-frame {
+  visibility: hidden;
 }
 
 .ad-card {
