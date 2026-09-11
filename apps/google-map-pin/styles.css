@@ -885,6 +885,15 @@ dialog::backdrop {
   width: min(728px, calc(100vw - 48px));
 }
 
+html.imobile-sp .ad-slot {
+  width: min(640px, calc(100vw - 32px));
+}
+
+html.imobile-sp .ad-frame,
+html.imobile-sp #home-ad {
+  min-height: 100px;
+}
+
 .ad-label {
   margin: 0;
   font-size: 11px;

@@ -53,7 +53,12 @@
         </aside>
         <script>
           (function () {
-            var smartphone = /Android.+Mobile|iPhone|iPod/i.test(navigator.userAgent);
+            var ua = navigator.userAgent || "";
+            var smartphone =
+              /Android.+Mobile|iPhone|iPod|iPad/i.test(ua) ||
+              (/Android/i.test(ua) && !/Mobile/i.test(ua)) ||
+              (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+            document.documentElement.classList.add(smartphone ? "imobile-sp" : "imobile-pc");
             var spot = smartphone
               ? { pid: 85422, mid: 596198, asid: 1943778, type: "banner", display: "inline", elementid: "im-6301f748d22642799a44fbc7353c2d79" }
               : { pid: 85422, mid: 596245, asid: 1943777, type: "banner", display: "inline", elementid: "im-9487a01bf63f48a2b6e8d2d76a891f76" };

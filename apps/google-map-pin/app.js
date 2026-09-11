@@ -41,12 +41,19 @@ const IMOBILE_SPOT_SP = {
   elementid: "im-6301f748d22642799a44fbc7353c2d79",
 };
 
+function isImobileSpDevice() {
+  const ua = navigator.userAgent || "";
+  if (/Android.+Mobile|iPhone|iPod|iPad/i.test(ua)) return true;
+  if (/Android/i.test(ua) && !/Mobile/i.test(ua)) return true;
+  return navigator.platform === "MacIntel" && Number(navigator.maxTouchPoints) > 1;
+}
+
 function isSmartphone() {
-  return /Android.+Mobile|iPhone|iPod/i.test(navigator.userAgent);
+  return isImobileSpDevice();
 }
 
 function getImobileSpot() {
-  return isSmartphone() ? IMOBILE_SPOT_SP : IMOBILE_SPOT_PC;
+  return isImobileSpDevice() ? IMOBILE_SPOT_SP : IMOBILE_SPOT_PC;
 }
 
 const state = {
