@@ -51,6 +51,22 @@
           <p class="ad-label">広告</p>
           <div id="home-ad"></div>
         </aside>
+        <script>
+          (function () {
+            var smartphone = /Android.+Mobile|iPhone|iPod/i.test(navigator.userAgent);
+            var spot = smartphone
+              ? { pid: 85422, mid: 596198, asid: 1943778, type: "banner", display: "inline", elementid: "im-6301f748d22642799a44fbc7353c2d79" }
+              : { pid: 85422, mid: 596245, asid: 1943777, type: "banner", display: "inline", elementid: "im-9487a01bf63f48a2b6e8d2d76a891f76" };
+            var slot = document.createElement("div");
+            slot.id = spot.elementid;
+            document.getElementById("home-ad").appendChild(slot);
+            window.__imobileSpot = spot;
+          })();
+        </script>
+        <script async src="https://imp-adedge.i-mobile.co.jp/script/v1/spot.js?20220104"></script>
+        <script>
+          (window.adsbyimobile = window.adsbyimobile || []).push(window.__imobileSpot);
+        </script>
         <div class="home-actions">
           <button type="button" class="btn huge primary" id="new-register">
             新規登録

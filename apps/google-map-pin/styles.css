@@ -767,7 +767,7 @@ dialog::backdrop {
   justify-items: center;
   gap: 6px;
   margin: 0 auto;
-  width: min(320px, calc(100vw - 48px));
+  width: min(728px, calc(100vw - 48px));
 }
 
 .ad-label {
@@ -783,7 +783,6 @@ dialog::backdrop {
   min-height: 250px;
   display: grid;
   place-items: center;
-  overflow: hidden;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 16px;

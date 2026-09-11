@@ -602,8 +602,11 @@ function mountImobileAd(container) {
   if (!container) return;
   const spot = getImobileSpot();
   const existing = document.getElementById(spot.elementid);
-  if (existing && container.contains(existing)) {
-    requestImobileAd();
+  if (existing) {
+    if (!container.contains(existing)) {
+      container.replaceChildren();
+      container.appendChild(existing);
+    }
     return;
   }
   [IMOBILE_SPOT_PC.elementid, IMOBILE_SPOT_SP.elementid].forEach((id) => {
@@ -618,9 +621,6 @@ function mountImobileAd(container) {
 
 function restoreHomeAd() {
   if (els.home?.hidden) return;
-  const spot = getImobileSpot();
-  const existing = document.getElementById(spot.elementid);
-  if (existing && els.homeAd?.contains(existing) && existing.childElementCount > 0) return;
   mountImobileAd(els.homeAd);
 }
 
