@@ -21,7 +21,7 @@ const IMOBILE_SPOT = {
   asid: 1943777,
   type: "banner",
   display: "inline",
-  elementid: "im-80ac5ca09d304850a6ee20b8972e2ae9",
+  elementid: "im-9487a01bf63f48a2b6e8d2d76a891f76",
 };
 
 const state = {
@@ -577,20 +577,30 @@ function ensureImobileScript() {
   document.head.appendChild(script);
 }
 
+function requestImobileAd() {
+  ensureImobileScript();
+  (window.adsbyimobile = window.adsbyimobile || []).push({ ...IMOBILE_SPOT });
+}
+
 function mountImobileAd(container) {
   if (!container) return;
   const existing = document.getElementById(IMOBILE_SPOT.elementid);
+  if (existing && container.contains(existing)) {
+    requestImobileAd();
+    return;
+  }
   if (existing) existing.remove();
   container.replaceChildren();
   const slot = document.createElement("div");
   slot.id = IMOBILE_SPOT.elementid;
   container.appendChild(slot);
-  ensureImobileScript();
-  (window.adsbyimobile = window.adsbyimobile || []).push({ ...IMOBILE_SPOT });
+  requestImobileAd();
 }
 
 function restoreHomeAd() {
   if (els.home?.hidden) return;
+  const existing = document.getElementById(IMOBILE_SPOT.elementid);
+  if (existing && els.homeAd?.contains(existing) && existing.childElementCount > 0) return;
   mountImobileAd(els.homeAd);
 }
 
