@@ -731,8 +731,12 @@ body.map-fullscreen {
   padding: 6px 14px;
 }
 
-.pin-popup-nav {
-  background: var(--leaf);
+a.pin-popup-nav,
+a.pin-popup-nav:link,
+a.pin-popup-nav:visited,
+a.pin-popup-nav:hover,
+a.pin-popup-nav:active {
+  background: var(--ink);
   color: #fff;
   text-decoration: none;
 }
