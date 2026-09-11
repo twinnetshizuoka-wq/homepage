@@ -13,6 +13,15 @@ const DRIVE_DATA_ID_KEY = "mymap-pin-app:drive-data-id";
 const LAYER_LIMIT = 1000;
 const SHEET_FIELDS = ["address", "propertyName", "companyRep", "clientRep", "note"];
 const DEFAULT_PIN_COLOR = "#e03131";
+const PIN_COLOR_PRESETS = [
+  ["赤", "#e03131"],
+  ["オレンジ", "#f76707"],
+  ["黄", "#f59f00"],
+  ["緑", "#2f9e44"],
+  ["青", "#1971c2"],
+  ["紫", "#7048e8"],
+  ["黒", "#343a40"],
+];
 const PROGRESS_OPTIONS = ["未着手", "対応中", "完了", "保留"];
 const IMOBILE_SCRIPT = "https://imp-adedge.i-mobile.co.jp/script/v1/spot.js?20220104";
 const IMOBILE_SPOT_PC = {
@@ -170,6 +179,84 @@ function sanitizePinColor(value) {
     return `#${text[1]}${text[1]}${text[2]}${text[2]}${text[3]}${text[3]}`.toLowerCase();
   }
   return DEFAULT_PIN_COLOR;
+}
+
+let pinColorMenuRow = null;
+
+function closePinColorMenu() {
+  const menu = document.getElementById("pin-color-menu");
+  if (menu) menu.hidden = true;
+  pinColorMenuRow = null;
+}
+
+function pinColorPresetButtons(selected) {
+  const current = sanitizePinColor(selected);
+  return PIN_COLOR_PRESETS.map(([name, value]) => {
+    const active = current === value ? " is-selected" : "";
+    return `<button type="button" class="pin-color-preset${active}" data-color="${value}" title="${name}" aria-label="${name}" style="background:${value}"></button>`;
+  }).join("");
+}
+
+function ensurePinColorMenu() {
+  let menu = document.getElementById("pin-color-menu");
+  if (menu) return menu;
+  menu = document.createElement("div");
+  menu.id = "pin-color-menu";
+  menu.className = "pin-color-menu";
+  menu.hidden = true;
+  menu.innerHTML = `
+    <p class="pin-color-menu-title">ピンの色</p>
+    <div class="pin-color-presets">${pinColorPresetButtons(DEFAULT_PIN_COLOR)}</div>
+    <label class="pin-color-custom">
+      自由に選ぶ
+      <input type="color" class="pin-color" id="pin-color-custom" value="${DEFAULT_PIN_COLOR}" />
+    </label>
+  `;
+  document.body.appendChild(menu);
+  menu.addEventListener("click", (event) => event.stopPropagation());
+  menu.querySelector(".pin-color-presets").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-color]");
+    if (!button || !pinColorMenuRow) return;
+    applyPinColor(pinColorMenuRow, button.dataset.color);
+    closePinColorMenu();
+  });
+  menu.querySelector("#pin-color-custom").addEventListener("input", (event) => {
+    if (!pinColorMenuRow) return;
+    applyPinColor(pinColorMenuRow, event.target.value);
+  });
+  return menu;
+}
+
+function applyPinColor(row, color) {
+  row.pinColor = sanitizePinColor(color);
+  const tr = els.sheetBody?.querySelector(`tr[data-row-id="${row.id}"]`);
+  const swatch = tr?.querySelector(".pin-color-swatch");
+  if (swatch) {
+    swatch.style.background = row.pinColor;
+    swatch.title = `ピンの色 ${row.pinColor}`;
+  }
+  const menu = document.getElementById("pin-color-menu");
+  if (menu) {
+    menu.querySelector(".pin-color-presets").innerHTML = pinColorPresetButtons(row.pinColor);
+    const custom = menu.querySelector("#pin-color-custom");
+    if (custom) custom.value = row.pinColor;
+  }
+  saveState();
+  syncMarkers();
+}
+
+function openPinColorMenu(row, anchor) {
+  const menu = ensurePinColorMenu();
+  pinColorMenuRow = row;
+  menu.querySelector(".pin-color-presets").innerHTML = pinColorPresetButtons(row.pinColor);
+  menu.querySelector("#pin-color-custom").value = sanitizePinColor(row.pinColor);
+  menu.hidden = false;
+  const rect = anchor.getBoundingClientRect();
+  const width = menu.offsetWidth || 220;
+  const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
+  const top = rect.bottom + 6;
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
 }
 
 function normalizeProgress(value) {
@@ -752,7 +839,7 @@ function renderSheet() {
     tr.innerHTML = `
       <td class="col-num" title="このピンを地図で見る">${index + 1}</td>
       <td class="col-color">
-        <input type="color" class="pin-color" value="${escapeAttr(sanitizePinColor(row.pinColor))}" title="ピンの色" aria-label="ピンの色" />
+        <button type="button" class="pin-color-swatch" style="background:${escapeAttr(sanitizePinColor(row.pinColor))}" title="ピンの色" aria-label="ピンの色を選ぶ"></button>
       </td>
       <td><textarea data-field="address" rows="2" placeholder="○○県○○市...">${escapeHtml(row.address)}</textarea></td>
       <td><textarea data-field="propertyName" rows="2" placeholder="○○ビル">${escapeHtml(row.propertyName)}</textarea></td>
@@ -794,11 +881,14 @@ function renderSheet() {
         void handleSheetPaste(event, index, input.dataset.field);
       });
     });
-    tr.querySelector(".pin-color").addEventListener("input", (event) => {
+    tr.querySelector(".pin-color-swatch").addEventListener("click", (event) => {
       event.stopPropagation();
-      row.pinColor = sanitizePinColor(event.target.value);
-      saveState();
-      syncMarkers();
+      const menu = document.getElementById("pin-color-menu");
+      if (menu && !menu.hidden && pinColorMenuRow === row) {
+        closePinColorMenu();
+        return;
+      }
+      openPinColorMenu(row, event.currentTarget);
     });
     tr.querySelector("[data-field=progress]").addEventListener("change", (event) => {
       row.progress = normalizeProgress(event.target.value);
@@ -1965,6 +2055,14 @@ function ensureDriveSession(options = {}) {
 }
 
 function bindEvents() {
+  document.addEventListener("click", (event) => {
+    if (event.target.closest(".pin-color-swatch, #pin-color-menu")) return;
+    closePinColorMenu();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closePinColorMenu();
+  });
+  window.addEventListener("scroll", closePinColorMenu, true);
   els.newRegister.addEventListener("click", () => withAd(startNewGroup));
   els.openMyMap.addEventListener("click", () => {
     const openDialog = () => {
