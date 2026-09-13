@@ -334,6 +334,37 @@
   transform: translateY(-1px);
 }
 
+/* Homepage ad slot (i-mobile PC 728x90) */
+.home-ad-slot {
+  padding: 0 1.5rem 2.5rem;
+}
+
+.home-ad-slot[hidden] {
+  display: none !important;
+}
+
+.home-ad-slot__inner {
+  width: var(--container);
+  max-width: 728px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.home-ad-slot__label {
+  margin: 0 0 0.5rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+#home-projects-ad {
+  min-height: 90px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
 /* Home Blog */
 .home-blog-grid {
   display: grid;

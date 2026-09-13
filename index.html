@@ -49,6 +49,47 @@
       </div>
     </section>
 
+    <!-- プロジェクト下バナー（アイモバイル・PC 728x90） -->
+    <aside class="home-ad-slot" aria-label="広告" hidden>
+      <div class="home-ad-slot__inner">
+        <p class="home-ad-slot__label">広告</p>
+        <div id="home-projects-ad"></div>
+      </div>
+    </aside>
+    <script>
+      (function () {
+        var ua = navigator.userAgent || '';
+        var isSp =
+          /Android.+Mobile|iPhone|iPod|iPad/i.test(ua) ||
+          (/Android/i.test(ua) && !/Mobile/i.test(ua)) ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if (isSp || window.matchMedia('(max-width: 768px)').matches) return;
+
+        var slot = document.querySelector('.home-ad-slot');
+        var host = document.getElementById('home-projects-ad');
+        if (!slot || !host) return;
+
+        var elementId = 'im-7a97e165ad9b4db7bf5513fa4dae8b4a';
+        var box = document.createElement('div');
+        box.id = elementId;
+        host.appendChild(box);
+        slot.hidden = false;
+
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://imp-adedge.i-mobile.co.jp/script/v1/spot.js?20220104';
+        document.head.appendChild(s);
+        (window.adsbyimobile = window.adsbyimobile || []).push({
+          pid: 85422,
+          mid: 596197,
+          asid: 1944358,
+          type: 'banner',
+          display: 'inline',
+          elementid: elementId,
+        });
+      })();
+    </script>
+
     <!-- ブログ -->
     <section class="section section--alt" id="blog" aria-labelledby="blog-title">
       <div class="section__inner">
