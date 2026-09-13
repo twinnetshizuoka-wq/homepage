@@ -334,7 +334,7 @@
   transform: translateY(-1px);
 }
 
-/* Homepage ad slot (i-mobile PC 728x90) */
+/* Homepage ad slot (i-mobile PC 728x90 / SP 320x100) */
 .home-ad-slot {
   padding: 0 1.5rem 2.5rem;
 }
@@ -350,6 +350,10 @@
   text-align: center;
 }
 
+html.home-ad-sp .home-ad-slot__inner {
+  max-width: 320px;
+}
+
 .home-ad-slot__label {
   margin: 0 0 0.5rem;
   font-size: 0.7rem;
@@ -363,6 +367,10 @@
   justify-content: center;
   align-items: center;
   overflow: hidden;
+}
+
+html.home-ad-sp #home-projects-ad {
+  min-height: 100px;
 }
 
 /* Home Blog */

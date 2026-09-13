@@ -49,7 +49,7 @@
       </div>
     </section>
 
-    <!-- プロジェクト下バナー（アイモバイル・PC 728x90） -->
+    <!-- プロジェクト下バナー（アイモバイル PC 728x90 / SP 320x100） -->
     <aside class="home-ad-slot" aria-label="広告" hidden>
       <div class="home-ad-slot__inner">
         <p class="home-ad-slot__label">広告</p>
@@ -62,16 +62,35 @@
         var isSp =
           /Android.+Mobile|iPhone|iPod|iPad/i.test(ua) ||
           (/Android/i.test(ua) && !/Mobile/i.test(ua)) ||
-          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        if (isSp || window.matchMedia('(max-width: 768px)').matches) return;
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+          window.matchMedia('(max-width: 768px)').matches;
+
+        var spot = isSp
+          ? {
+              pid: 85422,
+              mid: 596298,
+              asid: 1944359,
+              type: 'banner',
+              display: 'inline',
+              elementid: 'im-dd8c0f1891fb48679cf30dcb4c86bb61',
+            }
+          : {
+              pid: 85422,
+              mid: 596197,
+              asid: 1944358,
+              type: 'banner',
+              display: 'inline',
+              elementid: 'im-7a97e165ad9b4db7bf5513fa4dae8b4a',
+            };
 
         var slot = document.querySelector('.home-ad-slot');
         var host = document.getElementById('home-projects-ad');
         if (!slot || !host) return;
 
-        var elementId = 'im-7a97e165ad9b4db7bf5513fa4dae8b4a';
+        document.documentElement.classList.add(isSp ? 'home-ad-sp' : 'home-ad-pc');
+
         var box = document.createElement('div');
-        box.id = elementId;
+        box.id = spot.elementid;
         host.appendChild(box);
         slot.hidden = false;
 
@@ -79,14 +98,7 @@
         s.async = true;
         s.src = 'https://imp-adedge.i-mobile.co.jp/script/v1/spot.js?20220104';
         document.head.appendChild(s);
-        (window.adsbyimobile = window.adsbyimobile || []).push({
-          pid: 85422,
-          mid: 596197,
-          asid: 1944358,
-          type: 'banner',
-          display: 'inline',
-          elementid: elementId,
-        });
+        (window.adsbyimobile = window.adsbyimobile || []).push(spot);
       })();
     </script>
 
