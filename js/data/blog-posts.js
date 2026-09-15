@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'online-dating-risks',
+    title: '会わずに交際することのデメリット',
+    date: '2026-09-15',
+    excerpt:
+      '会わずに交際することのデメリット。実際に会ったときのギャップ、騙されるリスク、コミュニケーションの難しさ、AI時代の注意点を考えます。',
+    href: 'blog/online-dating-risks.html',
+    category: '考察',
+  },
+  {
     id: 'online-only-dating',
     title: '1度も会わずに交際する若者が増えている？',
     date: '2026-09-11',
