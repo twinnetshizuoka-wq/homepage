@@ -147,6 +147,7 @@ const els = {
   quotaCount: document.getElementById("quota-count"),
   quotaLimitNote: document.getElementById("quota-limit-note"),
   pasteClipboard: document.getElementById("paste-clipboard"),
+  bulkPinColor: document.getElementById("bulk-pin-color"),
   showMapButton: document.getElementById("show-map"),
   saveMymapFile: document.getElementById("save-mymap-file"),
 };
@@ -193,11 +194,13 @@ function sanitizePinColor(value) {
 }
 
 let pinColorMenuRow = null;
+let pinColorMenuMode = "row";
 
 function closePinColorMenu() {
   const menu = document.getElementById("pin-color-menu");
   if (menu) menu.hidden = true;
   pinColorMenuRow = null;
+  pinColorMenuMode = "row";
 }
 
 function pinColorPresetButtons(selected) {
@@ -206,6 +209,20 @@ function pinColorPresetButtons(selected) {
     const active = current === value ? " is-selected" : "";
     return `<button type="button" class="pin-color-preset${active}" data-color="${value}" title="${name}" aria-label="${name}" style="background:${value}"></button>`;
   }).join("");
+}
+
+function setPinColorMenuTitle(text) {
+  const title = document.getElementById("pin-color-menu")?.querySelector(".pin-color-menu-title");
+  if (title) title.textContent = text;
+}
+
+function refreshPinColorMenu(color) {
+  const menu = document.getElementById("pin-color-menu");
+  if (!menu) return;
+  const value = sanitizePinColor(color);
+  menu.querySelector(".pin-color-presets").innerHTML = pinColorPresetButtons(value);
+  const custom = menu.querySelector("#pin-color-custom");
+  if (custom) custom.value = value;
 }
 
 function ensurePinColorMenu() {
@@ -227,11 +244,22 @@ function ensurePinColorMenu() {
   menu.addEventListener("click", (event) => event.stopPropagation());
   menu.querySelector(".pin-color-presets").addEventListener("click", (event) => {
     const button = event.target.closest("[data-color]");
-    if (!button || !pinColorMenuRow) return;
+    if (!button) return;
+    if (pinColorMenuMode === "all") {
+      applyPinColorToAll(button.dataset.color);
+      closePinColorMenu();
+      toast("ピンの色を一括変更しました");
+      return;
+    }
+    if (!pinColorMenuRow) return;
     applyPinColor(pinColorMenuRow, button.dataset.color);
     closePinColorMenu();
   });
   menu.querySelector("#pin-color-custom").addEventListener("input", (event) => {
+    if (pinColorMenuMode === "all") {
+      applyPinColorToAll(event.target.value);
+      return;
+    }
     if (!pinColorMenuRow) return;
     applyPinColor(pinColorMenuRow, event.target.value);
   });
@@ -246,21 +274,26 @@ function applyPinColor(row, color) {
     swatch.style.background = row.pinColor;
     swatch.title = `ピンの色 ${row.pinColor}`;
   }
-  const menu = document.getElementById("pin-color-menu");
-  if (menu) {
-    menu.querySelector(".pin-color-presets").innerHTML = pinColorPresetButtons(row.pinColor);
-    const custom = menu.querySelector("#pin-color-custom");
-    if (custom) custom.value = row.pinColor;
-  }
+  refreshPinColorMenu(row.pinColor);
   saveState();
   syncMarkers();
 }
 
-function openPinColorMenu(row, anchor) {
+function applyPinColorToAll(color) {
+  const value = sanitizePinColor(color);
+  state.rows.forEach((row) => {
+    row.pinColor = value;
+  });
+  els.sheetBody?.querySelectorAll(".pin-color-swatch").forEach((swatch) => {
+    swatch.style.background = value;
+  });
+  refreshPinColorMenu(value);
+  saveState();
+  syncMarkers();
+}
+
+function placePinColorMenu(anchor) {
   const menu = ensurePinColorMenu();
-  pinColorMenuRow = row;
-  menu.querySelector(".pin-color-presets").innerHTML = pinColorPresetButtons(row.pinColor);
-  menu.querySelector("#pin-color-custom").value = sanitizePinColor(row.pinColor);
   menu.hidden = false;
   const rect = anchor.getBoundingClientRect();
   const width = menu.offsetWidth || 220;
@@ -268,6 +301,23 @@ function openPinColorMenu(row, anchor) {
   const top = rect.bottom + 6;
   menu.style.left = `${left}px`;
   menu.style.top = `${top}px`;
+}
+
+function openPinColorMenu(row, anchor) {
+  pinColorMenuMode = "row";
+  pinColorMenuRow = row;
+  setPinColorMenuTitle("ピンの色");
+  refreshPinColorMenu(row.pinColor);
+  placePinColorMenu(anchor);
+}
+
+function openBulkPinColorMenu(anchor) {
+  pinColorMenuMode = "all";
+  pinColorMenuRow = null;
+  const current = state.rows[0]?.pinColor || DEFAULT_PIN_COLOR;
+  setPinColorMenuTitle("ピンの色一括変更");
+  refreshPinColorMenu(current);
+  placePinColorMenu(anchor);
 }
 
 function normalizeProgress(value) {
@@ -298,13 +348,13 @@ function emptyRow() {
   };
 }
 
-function cloneRows(rows) {
+function cloneRows(rows, { newIds = false } = {}) {
   return (Array.isArray(rows) ? rows : []).map((row) => {
     const lat = parseCoord(row?.lat);
     const lng = parseCoord(row?.lng);
     const valid = isValidLatLng(lat, lng) && isInJapan(lat, lng);
     return {
-      id: row?.id || crypto.randomUUID(),
+      id: newIds ? crypto.randomUUID() : row?.id || crypto.randomUUID(),
       address: row?.address || "",
       propertyName: row?.propertyName || "",
       companyRep: row?.companyRep || "",
@@ -547,6 +597,36 @@ function startNewGroup() {
   showWorkspace();
 }
 
+function copyGroupName(name) {
+  const base = name || "無題";
+  const names = new Set(state.groups.map((group) => group.name || "無題"));
+  let candidate = `${base} のコピー`;
+  let n = 2;
+  while (names.has(candidate)) {
+    candidate = `${base} のコピー ${n}`;
+    n += 1;
+  }
+  return candidate;
+}
+
+function copyGroup(id) {
+  const source = state.groups.find((item) => item.id === id);
+  if (!source) return;
+  const copied = {
+    id: crypto.randomUUID(),
+    name: copyGroupName(source.name),
+    locationMode: source.locationMode || "address-and-name",
+    rows: cloneRows(source.rows, { newIds: true }),
+    updatedAt: Date.now(),
+  };
+  const index = state.groups.findIndex((item) => item.id === id);
+  state.groups.splice(index < 0 ? state.groups.length : index + 1, 0, copied);
+  persistGroups();
+  scheduleDriveSync();
+  renderGroups();
+  toast(`「${copied.name}」をコピーしました`);
+}
+
 function openGroup(id) {
   state.currentGroupId = id;
   applyCurrentGroup();
@@ -573,12 +653,14 @@ function renderGroups() {
         <h3>${escapeHtml(group.name || "無題")}</h3>
         <p>${count}件</p>
       </div>
-      <div>
+      <div class="group-item-actions">
         <button type="button" class="btn compact primary" data-open>開く</button>
+        <button type="button" class="btn compact" data-copy>コピー</button>
         <button type="button" class="btn danger" data-delete>削除</button>
       </div>
     `;
     item.querySelector("[data-open]").addEventListener("click", () => openGroup(group.id));
+    item.querySelector("[data-copy]").addEventListener("click", () => copyGroup(group.id));
     item.querySelector("[data-delete]").addEventListener("click", () => {
       if (!window.confirm(`「${group.name || "無題"}」を削除しますか？`)) return;
       state.groups = state.groups.filter((item) => item.id !== group.id);
@@ -2207,13 +2289,22 @@ function ensureDriveSession(options = {}) {
 
 function bindEvents() {
   document.addEventListener("click", (event) => {
-    if (event.target.closest(".pin-color-swatch, #pin-color-menu")) return;
+    if (event.target.closest(".pin-color-swatch, #pin-color-menu, #bulk-pin-color")) return;
     closePinColorMenu();
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closePinColorMenu();
   });
   window.addEventListener("scroll", closePinColorMenu, true);
+  els.bulkPinColor?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const menu = document.getElementById("pin-color-menu");
+    if (menu && !menu.hidden && pinColorMenuMode === "all") {
+      closePinColorMenu();
+      return;
+    }
+    openBulkPinColorMenu(event.currentTarget);
+  });
   els.newRegister.addEventListener("click", () => withAd(startNewGroup));
   els.openMyMap.addEventListener("click", () => {
     const openDialog = () => {

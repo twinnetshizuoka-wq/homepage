@@ -388,6 +388,26 @@ textarea {
   width: 48px;
 }
 
+.color-header-btn {
+  appearance: none;
+  display: inline-block;
+  margin: 0;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.color-header-btn:hover,
+.color-header-btn:focus-visible {
+  background: var(--sand);
+  color: var(--ink);
+}
+
 .col-progress {
   width: 92px;
 }
@@ -621,6 +641,13 @@ body.map-fullscreen {
   margin: 4px 0 0;
   font-size: 12px;
   color: var(--muted);
+}
+
+.group-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
 .map-controls {
