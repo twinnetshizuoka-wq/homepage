@@ -316,6 +316,23 @@
       </div>
     </dialog>
 
+    <dialog id="account-transfer-dialog">
+      <div class="dialog-card">
+        <h2 id="account-transfer-title">アカウント登録を解除</h2>
+        <p id="account-transfer-message">
+          今のグループデータを、次に登録するアカウントに追加しますか？
+        </p>
+        <p class="fine">
+          「追加する」と、次のアカウントのグループに今のデータが足されます。「追加しない」と、この端末のグループは消して、次のアカウントのデータだけを使います。前のアカウントに保存済みのデータは消えません。
+        </p>
+        <div class="form-actions">
+          <button type="button" class="btn primary" id="account-transfer-keep">追加する</button>
+          <button type="button" class="btn ghost" id="account-transfer-drop">追加しない</button>
+          <button type="button" class="btn ghost" id="account-transfer-cancel">やめる</button>
+        </div>
+      </div>
+    </dialog>
+
     <dialog id="settings-dialog">
       <form method="dialog" class="dialog-card" id="settings-form">
         <h2>設定</h2>

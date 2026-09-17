@@ -127,6 +127,12 @@ const els = {
   saveAccount: document.getElementById("save-account"),
   confirmAccount: document.getElementById("confirm-account"),
   closeAccount: document.getElementById("close-account"),
+  accountTransferDialog: document.getElementById("account-transfer-dialog"),
+  accountTransferTitle: document.getElementById("account-transfer-title"),
+  accountTransferMessage: document.getElementById("account-transfer-message"),
+  accountTransferKeep: document.getElementById("account-transfer-keep"),
+  accountTransferDrop: document.getElementById("account-transfer-drop"),
+  accountTransferCancel: document.getElementById("account-transfer-cancel"),
   settingsAccountEmail: document.getElementById("settings-account-email"),
   openSettings: document.getElementById("open-settings"),
   adDialog: document.getElementById("ad-dialog"),
@@ -667,26 +673,37 @@ async function syncFromDrive() {
   if (Array.isArray(cloud.progressOptions) && cloud.progressOptions.length) {
     applyProgressOptions(cloud.progressOptions);
   }
-  if (cloud.groups.length) {
-    state.groups = mergeGroups(state.groups, cloud.groups);
-    if (cloud.currentGroupId && state.groups.some((group) => group.id === cloud.currentGroupId)) {
-      state.currentGroupId = cloud.currentGroupId;
-    } else if (!state.groups.some((group) => group.id === state.currentGroupId)) {
-      state.currentGroupId = state.groups[0]?.id || null;
+  const bringLocal = carryLocalGroupsToNextAccount;
+  const localGroups = bringLocal ? state.groups : [];
+  try {
+    if (cloud.groups.length) {
+      state.groups = mergeGroups(localGroups, cloud.groups);
+      if (cloud.currentGroupId && state.groups.some((group) => group.id === cloud.currentGroupId)) {
+        state.currentGroupId = cloud.currentGroupId;
+      } else if (!state.groups.some((group) => group.id === state.currentGroupId)) {
+        state.currentGroupId = state.groups[0]?.id || null;
+      }
+      applySyncedGroups();
+      const uploaded = await uploadServerGroups();
+      if (uploaded) toast(`${savedGroups().length}件のグループを同期しました`, 5000);
+      return uploaded;
     }
-    applySyncedGroups();
-    const uploaded = await uploadServerGroups();
-    if (uploaded) toast(`${savedGroups().length}件のグループを同期しました`, 5000);
-    return uploaded;
+    if (bringLocal && savedGroups().length) {
+      applySyncedGroups();
+      const uploaded = await uploadServerGroups();
+      if (uploaded) toast(`この端末の${savedGroups().length}件を保存しました。他の端末でも再同期してください`, 5000);
+      return uploaded;
+    }
+    if (!bringLocal) {
+      state.groups = [];
+      state.currentGroupId = null;
+      applySyncedGroups();
+    }
+    toast("保存されたグループはまだありません。グループがある端末で先に再同期してください", 5000);
+    return true;
+  } finally {
+    carryLocalGroupsToNextAccount = true;
   }
-  if (savedGroups().length) {
-    applySyncedGroups();
-    const uploaded = await uploadServerGroups();
-    if (uploaded) toast(`この端末の${savedGroups().length}件を保存しました。他の端末でも再同期してください`, 5000);
-    return uploaded;
-  }
-  toast("保存されたグループはまだありません。グループがある端末で先に再同期してください", 5000);
-  return true;
 }
 
 function startNewGroup() {
@@ -1770,6 +1787,87 @@ function getRegisteredEmail() {
   return localStorage.getItem(ACCOUNT_KEY) || state.userEmail || "";
 }
 
+let carryLocalGroupsToNextAccount = true;
+let accountTransferResolve = null;
+
+function clearLocalGroupData() {
+  state.groups = [];
+  state.currentGroupId = null;
+  state.mapName = "";
+  state.rows = [emptyRow()];
+  persistGroups();
+  if (els.mapName) els.mapName.value = "";
+  renderSheet();
+  syncMarkers();
+}
+
+function settleAccountTransfer(decision) {
+  const resolve = accountTransferResolve;
+  accountTransferResolve = null;
+  if (els.accountTransferDialog?.open) els.accountTransferDialog.close();
+  resolve?.(decision);
+}
+
+function askGroupTransfer({ title, message, allowCancel = true }) {
+  return new Promise((resolve) => {
+    accountTransferResolve = resolve;
+    if (els.accountTransferTitle) els.accountTransferTitle.textContent = title;
+    if (els.accountTransferMessage) els.accountTransferMessage.textContent = message;
+    if (els.accountTransferCancel) els.accountTransferCancel.hidden = !allowCancel;
+    els.accountTransferDialog.showModal();
+  });
+}
+
+async function ensureGroupTransferDecision(nextEmail) {
+  const previous = String(getRegisteredEmail() || "").trim().toLowerCase();
+  const next = String(nextEmail || "").trim().toLowerCase();
+  if (!previous || !next || previous === next) return;
+  if (!savedGroups().length) {
+    carryLocalGroupsToNextAccount = false;
+    return;
+  }
+  const decision = await askGroupTransfer({
+    title: "Googleアカウントの変更",
+    message: `今のグループデータを「${next}」に追加しますか？`,
+    allowCancel: false,
+  });
+  if (decision === "keep") {
+    carryLocalGroupsToNextAccount = true;
+    return;
+  }
+  clearLocalGroupData();
+  carryLocalGroupsToNextAccount = false;
+}
+
+function finishUnregister(carry) {
+  state.accessToken = "";
+  carryLocalGroupsToNextAccount = Boolean(carry);
+  if (!carry) clearLocalGroupData();
+  setRegisteredAccount("");
+  if (els.accountEmail) els.accountEmail.value = "";
+  toast(
+    carry
+      ? "登録を解除しました。次のアカウントに今のグループを追加できます"
+      : "登録を解除しました。この端末のグループは次のアカウントに引き継ぎません"
+  );
+}
+
+async function unregisterGoogleAccount() {
+  if (!getRegisteredEmail()) return;
+  const count = savedGroups().length;
+  if (!count) {
+    finishUnregister(false);
+    return;
+  }
+  const decision = await askGroupTransfer({
+    title: "アカウント登録を解除",
+    message: `今のグループデータ（${count}件）を、次に登録するアカウントに追加しますか？`,
+    allowCancel: true,
+  });
+  if (decision === "cancel") return;
+  finishUnregister(decision === "keep");
+}
+
 function setRegisteredAccount(email) {
   const normalized = String(email || "").trim().toLowerCase();
   const previous = getRegisteredEmail();
@@ -2278,7 +2376,10 @@ function setupGoogleAuth() {
       const me = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
         headers: { Authorization: `Bearer ${state.accessToken}` },
       }).then((res) => res.json());
-      setRegisteredAccount(me.email || els.accountEmail.value);
+      const nextEmail = me.email || els.accountEmail.value;
+      await ensureGroupTransferDecision(nextEmail);
+      setRegisteredAccount(nextEmail);
+      state.accessToken = response.access_token;
       try {
         await syncFromDrive();
         finishDriveAuth(true);
@@ -2544,10 +2645,13 @@ function bindEvents() {
     void ensureDriveSession({ forcePrompt: true });
   });
   els.googleSignout.addEventListener("click", () => {
-    state.accessToken = "";
-    setRegisteredAccount("");
-    els.accountEmail.value = "";
-    toast("Googleアカウントの登録を解除しました");
+    void unregisterGoogleAccount();
+  });
+  els.accountTransferKeep?.addEventListener("click", () => settleAccountTransfer("keep"));
+  els.accountTransferDrop?.addEventListener("click", () => settleAccountTransfer("drop"));
+  els.accountTransferCancel?.addEventListener("click", () => settleAccountTransfer("cancel"));
+  els.accountTransferDialog?.addEventListener("close", () => {
+    if (accountTransferResolve) settleAccountTransfer("cancel");
   });
   els.saveAccount?.addEventListener("click", registerAccountFromInput);
   els.confirmAccount.addEventListener("click", () => {
