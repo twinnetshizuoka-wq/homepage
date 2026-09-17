@@ -842,6 +842,40 @@ dialog::backdrop {
 
 .dialog-card {
   padding: 24px;
+  max-height: min(88vh, 760px);
+  overflow: auto;
+}
+
+.settings-block {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.settings-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settings-block .fine {
+  margin: 0;
+  font-weight: 400;
+}
+
+.progress-options-list {
+  display: grid;
+  gap: 8px;
+}
+
+.progress-option-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.progress-option-row input {
+  flex: 1;
+  min-width: 0;
 }
 
 .dialog-card p,

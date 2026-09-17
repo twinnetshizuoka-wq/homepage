@@ -7,6 +7,7 @@ const DEFAULT_OAUTH_CLIENT_ID =
   "664582093232-q9cdpggq907t6qpm3sbfn5lqg8ks2hqi.apps.googleusercontent.com";
 const MYMAP_URL_KEY = "mymap-pin-app:mymap-url";
 const ACCOUNT_KEY = "mymap-pin-app:google-account";
+const PROGRESS_KEY = "mymap-pin-app:progress-options";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/userinfo.email";
 const DRIVE_DATA_NAME = "mymap-pin-app-data.json";
 const DRIVE_DATA_ID_KEY = "mymap-pin-app:drive-data-id";
@@ -22,7 +23,9 @@ const PIN_COLOR_PRESETS = [
   ["紫", "#7048e8"],
   ["黒", "#343a40"],
 ];
-const PROGRESS_OPTIONS = ["未着手", "対応中", "完了", "保留"];
+const DEFAULT_PROGRESS_OPTIONS = ["未着手", "対応中", "完了", "保留"];
+const MAX_PROGRESS_OPTIONS = 12;
+const MAX_PROGRESS_LABEL = 20;
 const IMOBILE_SCRIPT = "https://imp-adedge.i-mobile.co.jp/script/v1/spot.js?20220104";
 const IMOBILE_SPOT_PC = {
   pid: 85422,
@@ -77,6 +80,7 @@ const state = {
   locationMode: "address-and-name",
   groups: [],
   currentGroupId: null,
+  progressOptions: DEFAULT_PROGRESS_OPTIONS.slice(),
 };
 
 const els = {
@@ -137,6 +141,8 @@ const els = {
   oauthClientId: document.getElementById("oauth-client-id"),
   apiKey: document.getElementById("api-key-input"),
   myMapUrl: document.getElementById("mymap-url"),
+  progressOptionsList: document.getElementById("progress-options-list"),
+  addProgressOption: document.getElementById("add-progress-option"),
   toast: document.getElementById("toast"),
   resultDialog: document.getElementById("result-dialog"),
   resultMessage: document.getElementById("result-message"),
@@ -320,17 +326,104 @@ function openBulkPinColorMenu(anchor) {
   placePinColorMenu(anchor);
 }
 
+function getProgressOptions() {
+  return state.progressOptions?.length ? state.progressOptions : DEFAULT_PROGRESS_OPTIONS.slice();
+}
+
+function defaultProgress() {
+  return getProgressOptions()[0] || DEFAULT_PROGRESS_OPTIONS[0];
+}
+
+function sanitizeProgressOptions(value) {
+  const source = Array.isArray(value) ? value : String(value || "").split(/\r?\n/);
+  const seen = new Set();
+  const options = [];
+  source.forEach((item) => {
+    const text = String(item || "")
+      .trim()
+      .replace(/\s+/g, " ");
+    if (!text || seen.has(text)) return;
+    seen.add(text);
+    options.push(text.slice(0, MAX_PROGRESS_LABEL));
+  });
+  return options.length ? options.slice(0, MAX_PROGRESS_OPTIONS) : DEFAULT_PROGRESS_OPTIONS.slice();
+}
+
+function persistProgressOptions() {
+  localStorage.setItem(PROGRESS_KEY, JSON.stringify(getProgressOptions()));
+}
+
+function loadProgressOptions() {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if (!raw) {
+      state.progressOptions = DEFAULT_PROGRESS_OPTIONS.slice();
+      return;
+    }
+    state.progressOptions = sanitizeProgressOptions(JSON.parse(raw));
+  } catch {
+    state.progressOptions = DEFAULT_PROGRESS_OPTIONS.slice();
+  }
+}
+
+function applyProgressOptions(value) {
+  state.progressOptions = sanitizeProgressOptions(value);
+  persistProgressOptions();
+}
+
 function normalizeProgress(value) {
   const text = String(value || "").trim();
-  return PROGRESS_OPTIONS.includes(text) ? text : "未着手";
+  return text || defaultProgress();
 }
 
 function progressOptionsHtml(selected) {
   const current = normalizeProgress(selected);
-  return PROGRESS_OPTIONS.map(
-    (option) =>
-      `<option value="${escapeAttr(option)}"${option === current ? " selected" : ""}>${escapeHtml(option)}</option>`
-  ).join("");
+  const options = getProgressOptions().slice();
+  if (current && !options.includes(current)) options.push(current);
+  return options
+    .map(
+      (option) =>
+        `<option value="${escapeAttr(option)}"${option === current ? " selected" : ""}>${escapeHtml(option)}</option>`
+    )
+    .join("");
+}
+
+function readProgressOptionsEditor() {
+  if (!els.progressOptionsList) return getProgressOptions();
+  return [...els.progressOptionsList.querySelectorAll("input")].map((input) => input.value);
+}
+
+function renderProgressOptionsEditor(values) {
+  const list = els.progressOptionsList;
+  if (!list) return;
+  const items = Array.isArray(values) ? values.map((item) => String(item ?? "")) : [""];
+  const rows = items.length ? items : [""];
+  list.innerHTML = "";
+  rows.forEach((value, index) => {
+    const row = document.createElement("div");
+    row.className = "progress-option-row";
+    row.innerHTML = `
+      <input type="text" maxlength="${MAX_PROGRESS_LABEL}" value="${escapeAttr(value)}" aria-label="進捗 ${index + 1}" autocomplete="off" />
+      <button type="button" class="btn ghost compact" data-remove ${rows.length <= 1 ? "disabled" : ""}>削除</button>
+    `;
+    row.querySelector("[data-remove]").addEventListener("click", () => {
+      const next = readProgressOptionsEditor().filter((_, i) => i !== index);
+      renderProgressOptionsEditor(next.length ? next : [""]);
+    });
+    list.appendChild(row);
+  });
+}
+
+function addProgressOptionRow() {
+  const current = readProgressOptionsEditor();
+  if (current.length >= MAX_PROGRESS_OPTIONS) {
+    toast(`進捗は最大${MAX_PROGRESS_OPTIONS}件までです`);
+    return;
+  }
+  current.push("");
+  renderProgressOptionsEditor(current);
+  const inputs = els.progressOptionsList.querySelectorAll("input");
+  inputs[inputs.length - 1]?.focus();
 }
 
 function emptyRow() {
@@ -340,7 +433,7 @@ function emptyRow() {
     propertyName: "",
     companyRep: "",
     clientRep: "",
-    progress: "未着手",
+    progress: defaultProgress(),
     note: "",
     pinColor: DEFAULT_PIN_COLOR,
     lat: null,
@@ -374,6 +467,7 @@ function persistGroups() {
     JSON.stringify({
       currentGroupId: state.currentGroupId,
       groups: state.groups,
+      progressOptions: getProgressOptions(),
     })
   );
 }
@@ -400,6 +494,9 @@ function loadState() {
       const parsed = JSON.parse(raw);
       state.groups = Array.isArray(parsed.groups) ? parsed.groups : [];
       state.currentGroupId = parsed.currentGroupId || state.groups[0]?.id || null;
+      if (Array.isArray(parsed.progressOptions) && parsed.progressOptions.length) {
+        applyProgressOptions(parsed.progressOptions);
+      }
       applyCurrentGroup();
       return;
     }
@@ -535,6 +632,7 @@ async function downloadServerGroups() {
   return {
     groups: Array.isArray(data.groups) ? data.groups : [],
     currentGroupId: data.currentGroupId || null,
+    progressOptions: Array.isArray(data.progressOptions) ? data.progressOptions : null,
   };
 }
 
@@ -546,6 +644,7 @@ async function uploadServerGroups() {
     body: JSON.stringify({
       currentGroupId: state.currentGroupId,
       groups: state.groups,
+      progressOptions: getProgressOptions(),
       updatedAt: Date.now(),
     }),
   });
@@ -564,6 +663,9 @@ async function syncFromDrive() {
   if (cloud.error) {
     toast(cloud.error, 5000);
     return false;
+  }
+  if (Array.isArray(cloud.progressOptions) && cloud.progressOptions.length) {
+    applyProgressOptions(cloud.progressOptions);
   }
   if (cloud.groups.length) {
     state.groups = mergeGroups(state.groups, cloud.groups);
@@ -2457,8 +2559,10 @@ function bindEvents() {
     els.apiKey.value = getApiKey();
     els.myMapUrl.value = localStorage.getItem(MYMAP_URL_KEY) || "";
     els.settingsAccountEmail.value = getRegisteredEmail();
+    renderProgressOptionsEditor(getProgressOptions());
     els.settingsDialog.showModal();
   });
+  els.addProgressOption?.addEventListener("click", addProgressOptionRow);
   els.settingsForm.addEventListener("submit", (event) => {
     if (event.submitter?.value !== "save") return;
     const clientId = els.oauthClientId.value.trim();
@@ -2477,12 +2581,18 @@ function bindEvents() {
     if (mapUrl) localStorage.setItem(MYMAP_URL_KEY, mapUrl);
     else localStorage.removeItem(MYMAP_URL_KEY);
     if (account) setRegisteredAccount(account);
+    applyProgressOptions(readProgressOptionsEditor());
+    persistGroups();
+    scheduleDriveSync();
+    renderSheet();
+    syncMarkers();
     setupGoogleAuth();
     toast("設定を保存しました");
   });
 }
 
 function init() {
+  loadProgressOptions();
   loadState();
   els.mapName.value = state.mapName;
   setLocationMode(state.locationMode || "address-and-name");

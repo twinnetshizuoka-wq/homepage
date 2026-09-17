@@ -36,11 +36,26 @@ function blobStoreId() {
   return String(BLOB_TOKEN).split("_")[3] || "";
 }
 
+function sanitizeProgressOptions(value) {
+  if (!Array.isArray(value)) return null;
+  const seen = new Set();
+  const options = [];
+  value.forEach((item) => {
+    const text = String(item || "").trim();
+    if (!text || seen.has(text)) return;
+    seen.add(text);
+    options.push(text.slice(0, 20));
+  });
+  return options.length ? options.slice(0, 12) : null;
+}
+
 function normalizeRecord(data) {
+  const progressOptions = sanitizeProgressOptions(data?.progressOptions);
   return {
     groups: Array.isArray(data?.groups) ? data.groups : [],
     currentGroupId: data?.currentGroupId || null,
     updatedAt: Number(data?.updatedAt) || Date.now(),
+    ...(progressOptions ? { progressOptions } : {}),
   };
 }
 
