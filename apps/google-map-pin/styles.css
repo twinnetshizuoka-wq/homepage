@@ -396,7 +396,7 @@ textarea {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: inherit;
+  color: var(--leaf);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -405,7 +405,7 @@ textarea {
 .color-header-btn:hover,
 .color-header-btn:focus-visible {
   background: var(--sand);
-  color: var(--ink);
+  color: var(--leaf-hover);
 }
 
 .col-progress {
