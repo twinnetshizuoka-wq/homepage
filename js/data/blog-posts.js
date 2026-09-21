@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'telling-spouse-affair',
+    title: '知人の不倫をその配偶者に伝える場合',
+    date: '2026-09-21',
+    excerpt:
+      '知人の不倫をその配偶者に伝える場合の注意点。伝えること自体は直ちに違法ではない一方で、伝え方によってはトラブルになる可能性があります。',
+    href: 'blog/telling-spouse-affair.html',
+    category: '考察',
+  },
+  {
     id: 'online-dating-risks',
     title: '会わずに交際することのデメリット',
     date: '2026-09-15',
