@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'telling-spouse-affair-cautions',
+    title: '知人の不倫をその配偶者に伝えるときの注意点',
+    date: '2026-09-21',
+    excerpt:
+      '知人の不倫を配偶者に伝えるときの注意点。必要な範囲での伝達、事実と感情の分離、脅迫・SNS暴露・職場への告知などのリスクを紹介します。',
+    href: 'blog/telling-spouse-affair-cautions.html',
+    category: '考察',
+  },
+  {
     id: 'telling-spouse-affair',
     title: '知人の不倫をその配偶者に伝える場合',
     date: '2026-09-21',
