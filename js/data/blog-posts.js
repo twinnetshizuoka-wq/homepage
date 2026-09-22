@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'cabaret-background-check',
+    title: 'キャバ嬢の「水揚げ」を前提とした素行調査',
+    date: '2026-09-22',
+    excerpt:
+      'キャバ嬢の水揚げを前提とした素行調査について。結婚前に生活実態や金銭面を確認する考え方と、適法な調査の注意点を紹介します。',
+    href: 'blog/cabaret-background-check.html',
+    category: '考察',
+  },
+  {
     id: 'telling-spouse-affair-cautions',
     title: '知人の不倫をその配偶者に伝えるときの注意点',
     date: '2026-09-21',
