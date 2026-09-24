@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'room-discovery-release',
+    title: '新規入居部屋発見アプリをリリースしました！',
+    date: '2026-09-24',
+    excerpt:
+      '新規入居部屋発見アプリをリリースしました。賃貸物件サイトの掲載比較で、新しく入居した可能性のある部屋を探す営業支援アプリです。',
+    href: 'blog/room-discovery-release.html',
+    category: 'アプリ更新',
+  },
+  {
     id: 'cabaret-background-check',
     title: 'キャバ嬢の「水揚げ」を前提とした素行調査',
     date: '2026-09-22',
