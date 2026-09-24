@@ -14,10 +14,10 @@ export const projects = [
     icon: '🏠',
   },
   {
-    id: 'google-map-pin',
-    title: 'GoogleMapピン刺しアプリ',
-    features: ['GoogleMap連携', 'ピン刺し', '営業管理ツール'],
-    href: 'google-map-pin.html',
+    id: 'map-pin',
+    title: 'マップピン刺しアプリ',
+    features: ['地図連携', 'ピン刺し', '営業管理ツール'],
+    href: 'map-pin.html',
     icon: '📍',
   },
   {

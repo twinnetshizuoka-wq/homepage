@@ -17,12 +17,12 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   const token = bearerToken(req);
   if (!token) {
-    res.status(401).json({ error: "Googleログインが必要です" });
+    res.status(401).json({ error: "ログインが必要です" });
     return;
   }
   const email = await googleEmailFromToken(token);
   if (!email) {
-    res.status(401).json({ error: "Googleログインの有効期限が切れています。もう一度同期してください" });
+    res.status(401).json({ error: "ログインの有効期限が切れています。もう一度同期してください" });
     return;
   }
   if (!groupsStoreReady()) {

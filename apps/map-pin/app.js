@@ -1125,7 +1125,7 @@ function renderSheet() {
       </td>
       <td><textarea data-field="note" rows="2">${escapeHtml(row.note)}</textarea></td>
       <td class="col-action">
-        <button type="button" class="btn compact" data-nav title="Googleマップでナビ">ナビ</button>
+        <button type="button" class="btn compact" data-nav title="地図でナビ">ナビ</button>
         <button type="button" class="btn danger" data-delete>削除</button>
       </td>
     `;
@@ -1827,7 +1827,7 @@ async function ensureGroupTransferDecision(nextEmail) {
     return;
   }
   const decision = await askGroupTransfer({
-    title: "Googleアカウントの変更",
+    title: "アカウントの変更",
     message: `今のグループデータを「${next}」に追加しますか？`,
     allowCancel: false,
   });
@@ -1889,7 +1889,7 @@ function renderAccount() {
   const driveReady = Boolean(state.accessToken);
   const connected = Boolean(email);
   els.googleSignin.hidden = driveReady;
-  els.googleSignin.textContent = connected ? "Googleと同期" : "Googleアカウントを登録";
+  els.googleSignin.textContent = connected ? "クラウドと同期" : "アカウントを登録";
   els.googleSignout.hidden = !connected;
   els.accountBadge.hidden = !connected;
   els.accountBadge.textContent = connected ? (driveReady ? email : `${email}（未同期）`) : "";
@@ -1897,22 +1897,22 @@ function renderAccount() {
   els.signedInLabel.textContent = connected
     ? driveReady
       ? `${email} と同期済みです。PCとスマホで同じグループを使えます。`
-      : `${email} を登録済みです。まだドライブと同期できていません。「Googleと同期」を押してください。`
+      : `${email} を登録済みです。まだドライブと同期できていません。「クラウドと同期」を押してください。`
     : "";
   if (els.accountStatus) {
     els.accountStatus.textContent = connected
       ? driveReady
         ? `${email} と同期済みです。`
-        : `${email} を登録済みです。下のボタンで Google ドライブと同期してください。`
+        : `${email} を登録済みです。下のボタンで クラウドと同期してください。`
       : "未登録です。";
   }
   if (els.syncGroups) {
-    els.syncGroups.textContent = driveReady ? "Googleと再同期" : "Googleと同期";
+    els.syncGroups.textContent = driveReady ? "クラウドと再同期" : "クラウドと同期";
   }
   if (els.groupsSyncNote) {
     els.groupsSyncNote.textContent = driveReady
-      ? "Googleドライブとつながっています。一覧に出ないときは「Googleと再同期」を押してください。"
-      : "メールが表示されていても、同期には Google の許可画面が必要です。「Googleと同期」を押してください。";
+      ? "クラウドとつながっています。一覧に出ないときは「クラウドと再同期」を押してください。"
+      : "メールが表示されていても、同期には許可画面が必要です。「クラウドと同期」を押してください。";
   }
   if (els.accountEmail && !els.accountEmail.value) els.accountEmail.value = email;
   if (els.settingsAccountEmail) els.settingsAccountEmail.value = email;
@@ -1952,7 +1952,7 @@ function openAccountDialog() {
 function registerAccountFromInput() {
   const email = els.accountEmail.value.trim();
   if (!email || !email.includes("@")) {
-    toast("Googleアカウントのメールアドレスを入力してください");
+    toast("アカウントのメールアドレスを入力してください");
     els.accountEmail.focus();
     return;
   }
@@ -2368,7 +2368,7 @@ function setupGoogleAuth() {
       const silent = googleAuthSilent;
       googleAuthSilent = false;
       if (response.error) {
-        if (!silent) toast("Googleログインに失敗しました。ポップアップがブロックされていないか確認してください");
+        if (!silent) toast("ログインに失敗しました。ポップアップがブロックされていないか確認してください");
         finishDriveAuth(false);
         return;
       }
@@ -2384,7 +2384,7 @@ function setupGoogleAuth() {
         await syncFromDrive();
         finishDriveAuth(true);
       } catch {
-        if (!silent) toast("ログインしました。ドライブ同期は「Googleと同期」でもう一度お試しください");
+        if (!silent) toast("ログインしました。ドライブ同期は「クラウドと同期」でもう一度お試しください");
         finishDriveAuth(false);
       }
       if (!silent) els.accountDialog.close();
@@ -2393,7 +2393,7 @@ function setupGoogleAuth() {
       const silent = googleAuthSilent;
       googleAuthSilent = false;
       if (!silent && error?.type !== "popup_closed") {
-        toast("Googleログインを完了できませんでした");
+        toast("ログインを完了できませんでした");
       }
       finishDriveAuth(false);
     },
@@ -2425,7 +2425,7 @@ function isEmbeddedBrowser() {
 
 function requestGoogleSignIn(options = {}) {
   if (isEmbeddedBrowser()) {
-    if (!options.silent) toast("Googleの画面は Chrome または Edge で開いてください");
+    if (!options.silent) toast("ログイン画面は Chrome または Edge で開いてください");
     return;
   }
   if (!getOauthClientId()) {
@@ -2434,7 +2434,7 @@ function requestGoogleSignIn(options = {}) {
   }
   if (!state.tokenClient) setupGoogleAuth();
   if (!state.tokenClient) {
-    if (!options.silent) toast("Googleログインの読み込み中です。数秒後にもう一度押してください");
+    if (!options.silent) toast("ログインの読み込み中です。数秒後にもう一度押してください");
     return;
   }
   googleAuthSilent = Boolean(options.silent);
@@ -2516,7 +2516,7 @@ function bindEvents() {
       els.groupsDialog.showModal();
     };
     if (getRegisteredEmail() && !state.accessToken) {
-      toast("Googleドライブと同期します");
+      toast("クラウドと同期します");
       void ensureDriveSession({ forcePrompt: true }).then(openDialog);
       return;
     }
