@@ -88,7 +88,6 @@ const els = {
   workspace: document.getElementById("workspace-view"),
   newRegister: document.getElementById("new-register"),
   openMyMap: document.getElementById("open-mymap"),
-  openGoogleMyMaps: document.getElementById("open-google-mymaps"),
   registerGoogle: document.getElementById("register-google"),
   homeMapRegister: document.getElementById("home-map-register"),
   toolbarSaveMymap: document.getElementById("toolbar-save-mymap"),
@@ -2531,9 +2530,6 @@ function bindEvents() {
     void ensureDriveSession({ forcePrompt: !state.accessToken }).then(() => {
       renderGroups();
     });
-  });
-  els.openGoogleMyMaps.addEventListener("click", () => {
-    window.open(getMyMapUrl(), "_blank", "noopener");
   });
   els.registerGoogle.addEventListener("click", async () => {
     if (await isQuotaBlocked()) {
