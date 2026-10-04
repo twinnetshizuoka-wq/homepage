@@ -81,6 +81,7 @@ const state = {
   groups: [],
   currentGroupId: null,
   progressOptions: DEFAULT_PROGRESS_OPTIONS.slice(),
+  filters: {},
 };
 
 const els = {
@@ -159,6 +160,7 @@ const els = {
   quotaLimitNote: document.getElementById("quota-limit-note"),
   pasteClipboard: document.getElementById("paste-clipboard"),
   bulkPinColor: document.getElementById("bulk-pin-color"),
+  clearSheetFilters: document.getElementById("clear-sheet-filters"),
   showMapButton: document.getElementById("show-map"),
   saveMymapFile: document.getElementById("save-mymap-file"),
 };
@@ -259,7 +261,7 @@ function ensurePinColorMenu() {
     if (pinColorMenuMode === "all") {
       applyPinColorToAll(button.dataset.color);
       closePinColorMenu();
-      toast("ピンの色を一括変更しました");
+      toast(hasActiveSheetFilters() ? "表示中のピンの色を一括変更しました" : "ピンの色を一括変更しました");
       return;
     }
     if (!pinColorMenuRow) return;
@@ -287,20 +289,23 @@ function applyPinColor(row, color) {
   }
   refreshPinColorMenu(row.pinColor);
   saveState();
-  syncMarkers();
+  applySheetFilter();
 }
 
 function applyPinColorToAll(color) {
   const value = sanitizePinColor(color);
-  state.rows.forEach((row) => {
+  const rows = hasActiveSheetFilters() ? visibleRows() : state.rows;
+  rows.forEach((row) => {
     row.pinColor = value;
   });
-  els.sheetBody?.querySelectorAll(".pin-color-swatch").forEach((swatch) => {
-    swatch.style.background = value;
+  els.sheetBody?.querySelectorAll("tr[data-row-id]").forEach((tr) => {
+    if (tr.hidden) return;
+    const swatch = tr.querySelector(".pin-color-swatch");
+    if (swatch) swatch.style.background = value;
   });
   refreshPinColorMenu(value);
   saveState();
-  syncMarkers();
+  applySheetFilter();
 }
 
 function placePinColorMenu(anchor) {
@@ -326,7 +331,7 @@ function openBulkPinColorMenu(anchor) {
   pinColorMenuMode = "all";
   pinColorMenuRow = null;
   const current = state.rows[0]?.pinColor || DEFAULT_PIN_COLOR;
-  setPinColorMenuTitle("ピンの色一括変更");
+  setPinColorMenuTitle(hasActiveSheetFilters() ? "表示中のピンの色一括変更" : "ピンの色一括変更");
   refreshPinColorMenu(current);
   placePinColorMenu(anchor);
 }
@@ -478,6 +483,7 @@ function persistGroups() {
 }
 
 function applyCurrentGroup() {
+  resetSheetFilters();
   const group = state.groups.find((item) => item.id === state.currentGroupId);
   if (!group) {
     state.mapName = "";
@@ -707,6 +713,7 @@ async function syncFromDrive() {
 
 function startNewGroup() {
   saveState();
+  resetSheetFilters();
   state.currentGroupId = null;
   state.mapName = "";
   state.locationMode = "address-and-name";
@@ -881,6 +888,196 @@ function locationLabel(row) {
 
 function filledRows() {
   return state.rows.filter((row) => row.address.trim() || row.propertyName.trim());
+}
+
+const SHEET_FILTER_FIELDS = ["pinColor", "address", "propertyName", "companyRep", "clientRep", "progress"];
+let sheetFilterField = "";
+let sheetFilterDraft = new Set();
+
+function resetSheetFilters() {
+  state.filters = {};
+  closeSheetFilterMenu();
+}
+
+function filterFieldValue(row, key) {
+  if (key === "pinColor") return sanitizePinColor(row.pinColor);
+  if (key === "progress") return normalizeProgress(row.progress);
+  return String(row?.[key] || "").trim();
+}
+
+function uniqueFilterValues(key) {
+  const seen = new Set();
+  const values = [];
+  state.rows.forEach((row) => {
+    const value = filterFieldValue(row, key);
+    if (seen.has(value)) return;
+    seen.add(value);
+    values.push(value);
+  });
+  return values.sort((a, b) => {
+    if (a === "") return 1;
+    if (b === "") return -1;
+    return a.localeCompare(b, "ja");
+  });
+}
+
+function isFilterActive(key) {
+  const selected = state.filters[key];
+  if (!selected) return false;
+  return uniqueFilterValues(key).some((value) => !selected.has(value));
+}
+
+function hasActiveSheetFilters() {
+  return SHEET_FILTER_FIELDS.some((key) => isFilterActive(key));
+}
+
+function rowMatchesFilters(row) {
+  return SHEET_FILTER_FIELDS.every((key) => {
+    const selected = state.filters[key];
+    if (!selected) return true;
+    return selected.has(filterFieldValue(row, key));
+  });
+}
+
+function visibleRows() {
+  return hasActiveSheetFilters() ? state.rows.filter(rowMatchesFilters) : state.rows;
+}
+
+function pinColorLabel(color) {
+  const value = sanitizePinColor(color);
+  return PIN_COLOR_PRESETS.find(([, hex]) => hex === value)?.[0] || value;
+}
+
+function closeSheetFilterMenu() {
+  const menu = document.getElementById("sheet-filter-menu");
+  if (menu) menu.hidden = true;
+  sheetFilterField = "";
+}
+
+function updateFilterButtons() {
+  document.querySelectorAll("[data-filter-field]").forEach((button) => {
+    button.classList.toggle("is-active", isFilterActive(button.dataset.filterField));
+  });
+  if (els.clearSheetFilters) els.clearSheetFilters.hidden = !hasActiveSheetFilters();
+}
+
+function applySheetFilter() {
+  els.sheetBody?.querySelectorAll("tr[data-row-id]").forEach((tr) => {
+    const row = state.rows.find((item) => item.id === tr.dataset.rowId);
+    tr.hidden = Boolean(row && !rowMatchesFilters(row));
+  });
+  updateFilterButtons();
+  updateRowCount();
+  syncMarkers();
+}
+
+function filterOptionLabel(key, value) {
+  if (value === "") return "(空白)";
+  if (key === "pinColor") return pinColorLabel(value);
+  return value;
+}
+
+function renderSheetFilterOptions(query = "") {
+  const menu = document.getElementById("sheet-filter-menu");
+  if (!menu || !sheetFilterField) return;
+  const text = String(query || "").trim().toLowerCase();
+  const options = uniqueFilterValues(sheetFilterField).filter((value) => {
+    if (!text) return true;
+    return filterOptionLabel(sheetFilterField, value).toLowerCase().includes(text);
+  });
+  const box = menu.querySelector(".sheet-filter-options");
+  box.innerHTML = options
+    .map((value) => {
+      const checked = sheetFilterDraft.has(value) ? " checked" : "";
+      const swatch =
+        sheetFilterField === "pinColor" && value
+          ? `<span class="sheet-filter-swatch" style="background:${escapeAttr(value)}"></span>`
+          : "";
+      return `<label class="sheet-filter-option"><input type="checkbox" data-filter-value="${escapeAttr(value)}"${checked} />${swatch}<span>${escapeHtml(filterOptionLabel(sheetFilterField, value))}</span></label>`;
+    })
+    .join("");
+  const all = menu.querySelector("[data-filter-all]");
+  const visibleValues = options;
+  if (all) all.checked = visibleValues.length > 0 && visibleValues.every((value) => sheetFilterDraft.has(value));
+}
+
+function ensureSheetFilterMenu() {
+  let menu = document.getElementById("sheet-filter-menu");
+  if (menu) return menu;
+  menu = document.createElement("div");
+  menu.id = "sheet-filter-menu";
+  menu.className = "sheet-filter-menu";
+  menu.hidden = true;
+  menu.innerHTML = `
+    <input type="search" class="sheet-filter-search" placeholder="検索" autocomplete="off" />
+    <label class="sheet-filter-all"><input type="checkbox" data-filter-all /> すべて選択</label>
+    <div class="sheet-filter-options"></div>
+    <div class="sheet-filter-actions">
+      <button type="button" class="btn compact primary" data-filter-apply>OK</button>
+      <button type="button" class="btn compact" data-filter-clear>クリア</button>
+    </div>
+  `;
+  document.body.appendChild(menu);
+  menu.addEventListener("click", (event) => event.stopPropagation());
+  menu.querySelector(".sheet-filter-search").addEventListener("input", (event) => {
+    renderSheetFilterOptions(event.target.value);
+  });
+  menu.querySelector("[data-filter-all]").addEventListener("change", (event) => {
+    const query = menu.querySelector(".sheet-filter-search").value;
+    const options = uniqueFilterValues(sheetFilterField).filter((value) => {
+      const text = String(query || "").trim().toLowerCase();
+      if (!text) return true;
+      return filterOptionLabel(sheetFilterField, value).toLowerCase().includes(text);
+    });
+    options.forEach((value) => {
+      if (event.target.checked) sheetFilterDraft.add(value);
+      else sheetFilterDraft.delete(value);
+    });
+    renderSheetFilterOptions(query);
+  });
+  menu.querySelector(".sheet-filter-options").addEventListener("change", (event) => {
+    const input = event.target.closest("[data-filter-value]");
+    if (!input) return;
+    if (input.checked) sheetFilterDraft.add(input.dataset.filterValue);
+    else sheetFilterDraft.delete(input.dataset.filterValue);
+    renderSheetFilterOptions(menu.querySelector(".sheet-filter-search").value);
+  });
+  menu.querySelector("[data-filter-apply]").addEventListener("click", () => {
+    const all = uniqueFilterValues(sheetFilterField);
+    if (!all.length || all.every((value) => sheetFilterDraft.has(value))) {
+      delete state.filters[sheetFilterField];
+    } else {
+      state.filters[sheetFilterField] = new Set(sheetFilterDraft);
+    }
+    closeSheetFilterMenu();
+    applySheetFilter();
+  });
+  menu.querySelector("[data-filter-clear]").addEventListener("click", () => {
+    delete state.filters[sheetFilterField];
+    closeSheetFilterMenu();
+    applySheetFilter();
+  });
+  return menu;
+}
+
+function openSheetFilterMenu(field, anchor) {
+  const menu = ensureSheetFilterMenu();
+  if (sheetFilterField === field && !menu.hidden) {
+    closeSheetFilterMenu();
+    return;
+  }
+  sheetFilterField = field;
+  const selected = state.filters[field];
+  sheetFilterDraft = new Set(selected || uniqueFilterValues(field));
+  menu.querySelector(".sheet-filter-search").value = "";
+  renderSheetFilterOptions("");
+  menu.hidden = false;
+  const rect = anchor.getBoundingClientRect();
+  const width = menu.offsetWidth || 280;
+  const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
+  const top = Math.min(rect.bottom + 6, window.innerHeight - menu.offsetHeight - 8);
+  menu.style.left = `${left}px`;
+  menu.style.top = `${Math.max(8, top)}px`;
 }
 
 function isAdOverlayOpen() {
@@ -1141,6 +1338,7 @@ function renderSheet() {
         saveState();
         updateRowCount();
       });
+      input.addEventListener("blur", () => applySheetFilter());
       input.addEventListener("keydown", (event) => {
         if (event.key === "Enter") event.preventDefault();
       });
@@ -1167,7 +1365,7 @@ function renderSheet() {
     tr.querySelector("[data-field=progress]").addEventListener("change", (event) => {
       row.progress = normalizeProgress(event.target.value);
       saveState();
-      syncMarkers();
+      applySheetFilter();
     });
     tr.querySelector("[data-nav]").addEventListener("click", (event) => {
       event.stopPropagation();
@@ -1183,12 +1381,15 @@ function renderSheet() {
     });
     els.sheetBody.appendChild(tr);
   });
-  updateRowCount();
+  applySheetFilter();
 }
 
 function updateRowCount() {
   const count = filledRows().length;
-  els.rowCount.textContent = `${count}件 / ${LAYER_LIMIT}件（1グループ上限）`;
+  const visible = visibleRows().filter((row) => row.address.trim() || row.propertyName.trim()).length;
+  els.rowCount.textContent = hasActiveSheetFilters()
+    ? `表示${visible}件 / 全${count}件 / ${LAYER_LIMIT}件（1グループ上限）`
+    : `${count}件 / ${LAYER_LIMIT}件（1グループ上限）`;
   const over = count > LAYER_LIMIT;
   els.rowCount.classList.toggle("warn", over);
   els.layerNotice.classList.toggle("warn", over);
@@ -1499,14 +1700,14 @@ async function addPinAt(latlng) {
 
 function syncMarkers() {
   if (!state.map) return;
-  const keep = new Set(state.rows.map((row) => row.id));
+  const visible = new Set(visibleRows().map((row) => row.id));
   for (const [id, marker] of state.markers.entries()) {
-    if (!keep.has(id)) {
+    if (!visible.has(id)) {
       marker.remove();
       state.markers.delete(id);
     }
   }
-  state.rows.forEach((row) => {
+  visibleRows().forEach((row) => {
     if (!isValidLatLng(row.lat, row.lng)) return;
     const existing = state.markers.get(row.id);
     if (existing) {
@@ -1528,7 +1729,7 @@ function syncMarkers() {
 
 function fitPins() {
   if (!state.map) return;
-  const located = state.rows.filter((row) => isValidLatLng(row.lat, row.lng));
+  const located = visibleRows().filter((row) => isValidLatLng(row.lat, row.lng));
   if (!located.length) {
     state.map.setView([36.2, 138.25], 5);
     return;
@@ -2491,13 +2692,28 @@ function ensureDriveSession(options = {}) {
 
 function bindEvents() {
   document.addEventListener("click", (event) => {
-    if (event.target.closest(".pin-color-swatch, #pin-color-menu, #bulk-pin-color")) return;
-    closePinColorMenu();
+    if (!event.target.closest(".pin-color-swatch, #pin-color-menu, #bulk-pin-color")) closePinColorMenu();
+    if (!event.target.closest(".sheet-filter-btn, #sheet-filter-menu")) closeSheetFilterMenu();
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closePinColorMenu();
+    if (event.key === "Escape") {
+      closePinColorMenu();
+      closeSheetFilterMenu();
+    }
   });
   window.addEventListener("scroll", closePinColorMenu, true);
+  window.addEventListener("scroll", closeSheetFilterMenu, true);
+  document.querySelectorAll("[data-filter-field]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      closePinColorMenu();
+      openSheetFilterMenu(button.dataset.filterField, button);
+    });
+  });
+  els.clearSheetFilters?.addEventListener("click", () => {
+    resetSheetFilters();
+    applySheetFilter();
+  });
   els.bulkPinColor?.addEventListener("click", (event) => {
     event.stopPropagation();
     const menu = document.getElementById("pin-color-menu");

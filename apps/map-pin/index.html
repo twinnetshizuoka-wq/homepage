@@ -158,6 +158,7 @@
               クリップボードから貼り付け
             </button>
             <span class="count" id="row-count">0件</span>
+            <button type="button" class="btn compact" id="clear-sheet-filters" hidden>フィルター解除</button>
           </div>
 
           <div class="sheet-wrap">
@@ -166,15 +167,43 @@
                 <tr>
                   <th class="col-num">#</th>
                   <th class="col-color">
-                    <button type="button" class="color-header-btn" id="bulk-pin-color" title="ピンの色を一括変更">
-                      色
-                    </button>
+                    <div class="th-with-filter">
+                      <button type="button" class="color-header-btn" id="bulk-pin-color" title="ピンの色を一括変更">
+                        色
+                      </button>
+                      <button type="button" class="sheet-filter-btn" data-filter-field="pinColor" title="色で絞り込み" aria-label="色で絞り込み">▼</button>
+                    </div>
                   </th>
-                  <th>住所</th>
-                  <th>物件名</th>
-                  <th>自社担当者</th>
-                  <th>取引担当者</th>
-                  <th class="col-progress">進捗</th>
+                  <th>
+                    <div class="th-with-filter">
+                      <span>住所</span>
+                      <button type="button" class="sheet-filter-btn" data-filter-field="address" title="住所で絞り込み" aria-label="住所で絞り込み">▼</button>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="th-with-filter">
+                      <span>物件名</span>
+                      <button type="button" class="sheet-filter-btn" data-filter-field="propertyName" title="物件名で絞り込み" aria-label="物件名で絞り込み">▼</button>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="th-with-filter">
+                      <span>自社担当者</span>
+                      <button type="button" class="sheet-filter-btn" data-filter-field="companyRep" title="自社担当者で絞り込み" aria-label="自社担当者で絞り込み">▼</button>
+                    </div>
+                  </th>
+                  <th>
+                    <div class="th-with-filter">
+                      <span>取引担当者</span>
+                      <button type="button" class="sheet-filter-btn" data-filter-field="clientRep" title="取引担当者で絞り込み" aria-label="取引担当者で絞り込み">▼</button>
+                    </div>
+                  </th>
+                  <th class="col-progress">
+                    <div class="th-with-filter">
+                      <span>進捗</span>
+                      <button type="button" class="sheet-filter-btn" data-filter-field="progress" title="進捗で絞り込み" aria-label="進捗で絞り込み">▼</button>
+                    </div>
+                  </th>
                   <th>備考</th>
                   <th class="col-action"></th>
                 </tr>
@@ -183,7 +212,7 @@
             </table>
           </div>
           <p class="fine">
-            Excel のセル範囲をコピーし、表の先頭セルに貼り付けると複数行をまとめて追加できます。スマホでは「クリップボードから貼り付け」を使うか、セルへ貼り付けてください。行番号を押すと、そのピンに地図が寄ります。
+            見出しの ▼ で色・住所・物件名・担当者・進捗を絞り込めます。非表示の行は地図からも消えます。Excel のセル範囲をコピーし、表の先頭セルに貼り付けると複数行をまとめて追加できます。行番号を押すと、そのピンに地図が寄ります。
           </p>
         </div>
 
