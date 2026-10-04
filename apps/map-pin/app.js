@@ -12,7 +12,7 @@ const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file https://www.goog
 const DRIVE_DATA_NAME = "mymap-pin-app-data.json";
 const DRIVE_DATA_ID_KEY = "mymap-pin-app:drive-data-id";
 const LAYER_LIMIT = 1000;
-const SHEET_FIELDS = ["address", "propertyName", "companyRep", "clientRep", "note"];
+const SHEET_FIELDS = ["address", "propertyName", "companyRep", "clientRep", "product", "note"];
 const DEFAULT_PIN_COLOR = "#e03131";
 const PIN_COLOR_PRESETS = [
   ["赤", "#e03131"],
@@ -443,6 +443,7 @@ function emptyRow() {
     propertyName: "",
     companyRep: "",
     clientRep: "",
+    product: "",
     progress: defaultProgress(),
     note: "",
     pinColor: DEFAULT_PIN_COLOR,
@@ -462,6 +463,7 @@ function cloneRows(rows, { newIds = false } = {}) {
       propertyName: row?.propertyName || "",
       companyRep: row?.companyRep || "",
       clientRep: row?.clientRep || "",
+      product: row?.product || "",
       progress: normalizeProgress(row?.progress),
       note: row?.note || "",
       pinColor: sanitizePinColor(row?.pinColor),
@@ -890,7 +892,7 @@ function filledRows() {
   return state.rows.filter((row) => row.address.trim() || row.propertyName.trim());
 }
 
-const SHEET_FILTER_FIELDS = ["pinColor", "address", "propertyName", "companyRep", "clientRep", "progress"];
+const SHEET_FILTER_FIELDS = ["pinColor", "address", "propertyName", "companyRep", "clientRep", "product", "progress"];
 let sheetFilterField = "";
 let sheetFilterDraft = new Set();
 
@@ -1396,6 +1398,7 @@ function renderSheet() {
       <td><textarea data-field="propertyName" rows="2" placeholder="○○ビル">${escapeHtml(row.propertyName)}</textarea></td>
       <td><textarea data-field="companyRep" rows="2" placeholder="△△">${escapeHtml(row.companyRep)}</textarea></td>
       <td><textarea data-field="clientRep" rows="2" placeholder="○○">${escapeHtml(row.clientRep)}</textarea></td>
+      <td><textarea data-field="product" rows="2" placeholder="商品名">${escapeHtml(row.product || "")}</textarea></td>
       <td class="col-progress">
         <select data-field="progress" aria-label="進捗">${progressOptionsHtml(row.progress)}</select>
       </td>
@@ -1504,7 +1507,7 @@ function escapeCsv(value) {
 
 function isHeaderRow(cells) {
   const text = cells.join("");
-  return ["住所", "物件名", "自社担当", "取引担当", "進捗", "備考", "address", "name"].some((label) =>
+  return ["住所", "物件名", "自社担当", "取引担当", "商品", "進捗", "備考", "address", "name"].some((label) =>
     text.includes(label)
   );
 }
@@ -1607,9 +1610,11 @@ function applyExcelPaste(startRowIndex, startField, text) {
     while (state.rows.length <= rowIndex) state.rows.push(emptyRow());
     const row = state.rows[rowIndex];
     const pasteFields =
-      startField === "address" && cells.length >= 6
-        ? ["address", "propertyName", "companyRep", "clientRep", "progress", "note"]
-        : SHEET_FIELDS;
+      startField === "address" && cells.length >= 7
+        ? ["address", "propertyName", "companyRep", "clientRep", "product", "progress", "note"]
+        : startField === "address" && cells.length >= 6
+          ? ["address", "propertyName", "companyRep", "clientRep", "progress", "note"]
+          : SHEET_FIELDS;
     cells.forEach((value, colOffset) => {
       const field = pasteFields[startCol + colOffset];
       if (!field) return;
@@ -1686,7 +1691,7 @@ function popupHtml(row) {
   return `<div class="pin-popup">
       <strong>${escapeHtml(row.propertyName || row.address)}</strong><br>${escapeHtml(row.address)}
       <br>自社: ${escapeHtml(row.companyRep || "-")} / 取引: ${escapeHtml(row.clientRep || "-")}
-      <br>進捗: ${escapeHtml(normalizeProgress(row.progress))}
+      <br>商品: ${escapeHtml(row.product || "-")} / 進捗: ${escapeHtml(normalizeProgress(row.progress))}
       <div class="pin-popup-actions">
         ${navControl}
         <button type="button" class="btn danger pin-popup-delete" data-delete-pin="${escapeAttr(row.id)}">このピンを削除</button>
@@ -2350,7 +2355,7 @@ async function reverseGeocode(lat, lng) {
 }
 
 function toCsv() {
-  const header = ["名前", "位置", "住所", "物件名", "自社担当者", "取引担当者", "進捗", "備考", "ピン色", "緯度", "経度"];
+  const header = ["名前", "位置", "住所", "物件名", "自社担当者", "取引担当者", "商品", "進捗", "備考", "ピン色", "緯度", "経度"];
   const rows = filledRows().map((row) =>
     [
       row.propertyName || row.address,
@@ -2359,6 +2364,7 @@ function toCsv() {
       row.propertyName,
       row.companyRep,
       row.clientRep,
+      row.product,
       normalizeProgress(row.progress),
       row.note,
       sanitizePinColor(row.pinColor),
@@ -2383,6 +2389,7 @@ function toKml() {
         row.address,
         `自社担当: ${row.companyRep}`,
         `取引担当: ${row.clientRep}`,
+        `商品: ${row.product}`,
         `進捗: ${normalizeProgress(row.progress)}`,
         row.note,
       ]
@@ -2406,6 +2413,7 @@ function parseCsv(text) {
   const nameIdx = index(["物件名", "名前", "name"]);
   const companyIdx = index(["自社"]);
   const clientIdx = index(["取引"]);
+  const productIdx = index(["商品"]);
   const progressIdx = index(["進捗"]);
   const noteIdx = index(["備考", "説明"]);
   const colorIdx = index(["ピン色", "色"]);
@@ -2421,6 +2429,7 @@ function parseCsv(text) {
       propertyName: cells[nameIdx] || "",
       companyRep: cells[companyIdx] || "",
       clientRep: cells[clientIdx] || "",
+      product: cells[productIdx] || "",
       progress: normalizeProgress(cells[progressIdx]),
       note: cells[noteIdx] || "",
       pinColor: sanitizePinColor(cells[colorIdx]),
@@ -2545,7 +2554,7 @@ function authHeaders() {
 async function upsertSpreadsheet(rows) {
   const title = state.mapName;
   const values = [
-    ["名前", "位置", "住所", "物件名", "自社担当者", "取引担当者", "進捗", "備考", "ピン色", "緯度", "経度"],
+    ["名前", "位置", "住所", "物件名", "自社担当者", "取引担当者", "商品", "進捗", "備考", "ピン色", "緯度", "経度"],
     ...rows.map((row) => [
       row.propertyName || row.address,
       locationLabel(row),
@@ -2553,6 +2562,7 @@ async function upsertSpreadsheet(rows) {
       row.propertyName,
       row.companyRep,
       row.clientRep,
+      row.product,
       normalizeProgress(row.progress),
       row.note,
       sanitizePinColor(row.pinColor),
