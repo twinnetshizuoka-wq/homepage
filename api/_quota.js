@@ -39,6 +39,10 @@ function blobEnabled() {
   return Boolean(BLOB_TOKEN);
 }
 
+function blobStoreId() {
+  return String(BLOB_TOKEN).split("_")[3] || "";
+}
+
 async function kvCommand(args) {
   const response = await fetch(KV_URL, {
     method: "POST",
@@ -102,34 +106,65 @@ async function consumeQuotaKv(amount) {
   };
 }
 
-async function blobGet() {
-  return fetch(`https://blob.vercel-storage.com/${BLOB_NAME}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${BLOB_TOKEN}`,
-      "x-api-version": "7",
-    },
-  });
-}
-
 async function blobPut(body) {
-  return fetch(`https://blob.vercel-storage.com/${BLOB_NAME}`, {
+  const storeId = blobStoreId();
+  const headers = {
+    Authorization: `Bearer ${BLOB_TOKEN}`,
+    "x-api-version": "12",
+    "x-vercel-blob-access": "private",
+    "x-allow-overwrite": "1",
+    "x-add-random-suffix": "0",
+    "x-content-type": "application/json",
+  };
+  if (storeId) headers["x-vercel-blob-store-id"] = storeId;
+  const response = await fetch(
+    `https://vercel.com/api/blob/?pathname=${encodeURIComponent(BLOB_NAME)}`,
+    { method: "PUT", headers, body }
+  );
+  if (response.ok) return response;
+  const legacy = await fetch(`https://blob.vercel-storage.com/${BLOB_NAME}`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${BLOB_TOKEN}`,
       "x-api-version": "7",
-      "x-content-type": "application/json",
+      "x-vercel-blob-access": "private",
+      "x-allow-overwrite": "1",
       "x-add-random-suffix": "0",
-      "x-allow-overwrite": "true",
+      "x-content-type": "application/json",
     },
     body,
   });
+  return legacy.ok ? legacy : response;
+}
+
+async function blobGet() {
+  const storeId = blobStoreId();
+  const urls = [];
+  if (storeId) {
+    urls.push(
+      `https://${storeId}.private.blob.vercel-storage.com/${BLOB_NAME}?cache=0`
+    );
+    urls.push(`https://${storeId}.public.blob.vercel-storage.com/${BLOB_NAME}`);
+  }
+  urls.push(`https://blob.vercel-storage.com/${BLOB_NAME}`);
+  let last = null;
+  for (const url of urls) {
+    last = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${BLOB_TOKEN}`,
+        "x-api-version": "12",
+      },
+    });
+    if (last.ok || last.status === 404) return last;
+  }
+  return last;
 }
 
 async function readQuotaBlob() {
   const today = jstDateKey();
   const response = await blobGet();
-  if (response.status === 404) {
+  if (!response || response.status === 404) {
     return { date: today, count: 0, limit: DAILY_QUOTA_LIMIT };
   }
   if (!response.ok) {
@@ -170,20 +205,43 @@ async function consumeQuotaBlob(amount) {
 }
 
 export async function quotaStatus() {
-  try {
-    if (kvEnabled()) return quotaStatusKv();
-    if (blobEnabled()) return quotaStatusBlob();
-    return withRemaining(await readQuotaFile());
-  } catch {
-    return withRemaining({ date: jstDateKey(), count: 0, limit: DAILY_QUOTA_LIMIT });
+  if (blobEnabled()) {
+    try {
+      return await quotaStatusBlob();
+    } catch {
+      // try the next store
+    }
   }
+  if (kvEnabled()) {
+    try {
+      return await quotaStatusKv();
+    } catch {
+      // try the next store
+    }
+  }
+  if (!blobEnabled() && !kvEnabled()) {
+    return withRemaining(await readQuotaFile());
+  }
+  return withRemaining({ date: jstDateKey(), count: 0, limit: DAILY_QUOTA_LIMIT });
 }
 
 export async function consumeQuota(amount = 1) {
   const take = Math.max(1, Math.min(5000, Number(amount) || 1));
-  try {
-    if (kvEnabled()) return consumeQuotaKv(take);
-    if (blobEnabled()) return consumeQuotaBlob(take);
+  if (blobEnabled()) {
+    try {
+      return await consumeQuotaBlob(take);
+    } catch {
+      // try the next store
+    }
+  }
+  if (kvEnabled()) {
+    try {
+      return await consumeQuotaKv(take);
+    } catch {
+      // try the next store
+    }
+  }
+  if (!blobEnabled() && !kvEnabled()) {
     const quota = await readQuotaFile();
     const remaining = Math.max(0, quota.limit - quota.count);
     if (remaining <= 0) {
@@ -196,10 +254,6 @@ export async function consumeQuota(amount = 1) {
       JSON.stringify({ date: quota.date, count: quota.count }, null, 2)
     );
     return { ...withRemaining(quota), consumed };
-  } catch {
-    return {
-      ...withRemaining({ date: jstDateKey(), count: 0, limit: DAILY_QUOTA_LIMIT }),
-      consumed: take,
-    };
   }
+  throw new Error("quota store unavailable");
 }
