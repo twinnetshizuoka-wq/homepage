@@ -899,6 +899,45 @@ function resetSheetFilters() {
   closeSheetFilterMenu();
 }
 
+function parseRowNumberInput(value) {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  const n = Number(text);
+  if (!Number.isFinite(n) || n < 1) return null;
+  return Math.floor(n);
+}
+
+function isRowNumberFilterActive() {
+  const range = state.filters.rowNumber;
+  return Boolean(range && (range.from != null || range.to != null));
+}
+
+function rowNumberOf(row) {
+  return state.rows.indexOf(row) + 1;
+}
+
+function rowMatchesNumberFilter(row) {
+  if (!isRowNumberFilterActive()) return true;
+  const range = state.filters.rowNumber;
+  const n = rowNumberOf(row);
+  const from = range.from != null ? range.from : 1;
+  const to = range.to != null ? range.to : state.rows.length;
+  const start = Math.min(from, to);
+  const end = Math.max(from, to);
+  return n >= start && n <= end;
+}
+
+function applyRowNumberFilterFromMenu(closeMenu = false) {
+  const menu = document.getElementById("sheet-filter-menu");
+  if (!menu) return;
+  const from = parseRowNumberInput(menu.querySelector("[data-filter-from]")?.value);
+  const to = parseRowNumberInput(menu.querySelector("[data-filter-to]")?.value);
+  if (from == null && to == null) delete state.filters.rowNumber;
+  else state.filters.rowNumber = { from, to };
+  if (closeMenu) closeSheetFilterMenu();
+  applySheetFilter();
+}
+
 function filterFieldValue(row, key) {
   if (key === "pinColor") return sanitizePinColor(row.pinColor);
   if (key === "progress") return normalizeProgress(row.progress);
@@ -922,16 +961,18 @@ function uniqueFilterValues(key) {
 }
 
 function isFilterActive(key) {
+  if (key === "rowNumber") return isRowNumberFilterActive();
   const selected = state.filters[key];
   if (!selected) return false;
   return uniqueFilterValues(key).some((value) => !selected.has(value));
 }
 
 function hasActiveSheetFilters() {
-  return SHEET_FILTER_FIELDS.some((key) => isFilterActive(key));
+  return isRowNumberFilterActive() || SHEET_FILTER_FIELDS.some((key) => isFilterActive(key));
 }
 
 function rowMatchesFilters(row) {
+  if (!rowMatchesNumberFilter(row)) return false;
   return SHEET_FILTER_FIELDS.every((key) => {
     const selected = state.filters[key];
     if (!selected) return true;
@@ -1009,16 +1050,43 @@ function ensureSheetFilterMenu() {
   menu.className = "sheet-filter-menu";
   menu.hidden = true;
   menu.innerHTML = `
-    <input type="search" class="sheet-filter-search" placeholder="検索" autocomplete="off" />
-    <label class="sheet-filter-all"><input type="checkbox" data-filter-all /> すべて選択</label>
-    <div class="sheet-filter-options"></div>
-    <div class="sheet-filter-actions">
-      <button type="button" class="btn compact primary" data-filter-apply>OK</button>
-      <button type="button" class="btn compact" data-filter-clear>クリア</button>
+    <div class="sheet-filter-list">
+      <input type="search" class="sheet-filter-search" placeholder="検索" autocomplete="off" />
+      <label class="sheet-filter-all"><input type="checkbox" data-filter-all /> すべて選択</label>
+      <div class="sheet-filter-options"></div>
+      <div class="sheet-filter-actions">
+        <button type="button" class="btn compact primary" data-filter-apply>OK</button>
+        <button type="button" class="btn compact" data-filter-clear>クリア</button>
+      </div>
+    </div>
+    <div class="sheet-filter-range" hidden>
+      <div class="sheet-filter-range-row">
+        <input type="number" min="1" step="1" inputmode="numeric" data-filter-from aria-label="開始番号" />
+        <span>～</span>
+        <input type="number" min="1" step="1" inputmode="numeric" data-filter-to aria-label="終了番号" />
+      </div>
+      <div class="sheet-filter-actions">
+        <button type="button" class="btn compact primary" data-filter-range-apply>OK</button>
+        <button type="button" class="btn compact" data-filter-range-clear>フィルター解除</button>
+      </div>
     </div>
   `;
   document.body.appendChild(menu);
   menu.addEventListener("click", (event) => event.stopPropagation());
+  menu.querySelector("[data-filter-from]").addEventListener("change", () => applyRowNumberFilterFromMenu());
+  menu.querySelector("[data-filter-to]").addEventListener("change", () => applyRowNumberFilterFromMenu());
+  menu.querySelector("[data-filter-from]").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") applyRowNumberFilterFromMenu(true);
+  });
+  menu.querySelector("[data-filter-to]").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") applyRowNumberFilterFromMenu(true);
+  });
+  menu.querySelector("[data-filter-range-apply]").addEventListener("click", () => applyRowNumberFilterFromMenu(true));
+  menu.querySelector("[data-filter-range-clear]").addEventListener("click", () => {
+    delete state.filters.rowNumber;
+    closeSheetFilterMenu();
+    applySheetFilter();
+  });
   menu.querySelector(".sheet-filter-search").addEventListener("input", (event) => {
     renderSheetFilterOptions(event.target.value);
   });
@@ -1067,10 +1135,21 @@ function openSheetFilterMenu(field, anchor) {
     return;
   }
   sheetFilterField = field;
-  const selected = state.filters[field];
-  sheetFilterDraft = new Set(selected || uniqueFilterValues(field));
-  menu.querySelector(".sheet-filter-search").value = "";
-  renderSheetFilterOptions("");
+  const isRange = field === "rowNumber";
+  const list = menu.querySelector(".sheet-filter-list");
+  const range = menu.querySelector(".sheet-filter-range");
+  if (list) list.hidden = isRange;
+  if (range) range.hidden = !isRange;
+  if (isRange) {
+    const current = state.filters.rowNumber || {};
+    menu.querySelector("[data-filter-from]").value = current.from != null ? current.from : "";
+    menu.querySelector("[data-filter-to]").value = current.to != null ? current.to : "";
+  } else {
+    const selected = state.filters[field];
+    sheetFilterDraft = new Set(selected || uniqueFilterValues(field));
+    menu.querySelector(".sheet-filter-search").value = "";
+    renderSheetFilterOptions("");
+  }
   menu.hidden = false;
   const rect = anchor.getBoundingClientRect();
   const width = menu.offsetWidth || 280;
@@ -1078,6 +1157,7 @@ function openSheetFilterMenu(field, anchor) {
   const top = Math.min(rect.bottom + 6, window.innerHeight - menu.offsetHeight - 8);
   menu.style.left = `${left}px`;
   menu.style.top = `${Math.max(8, top)}px`;
+  if (isRange) menu.querySelector("[data-filter-from]")?.focus();
 }
 
 function isAdOverlayOpen() {

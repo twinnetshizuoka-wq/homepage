@@ -376,7 +376,7 @@ textarea {
 }
 
 .col-num {
-  width: 44px;
+  width: 56px;
   text-align: center;
 }
 
@@ -428,7 +428,9 @@ textarea {
   box-shadow: var(--shadow);
 }
 
-.sheet-filter-menu[hidden] {
+.sheet-filter-menu[hidden],
+.sheet-filter-list[hidden],
+.sheet-filter-range[hidden] {
   display: none;
 }
 
@@ -473,6 +475,19 @@ textarea {
 .sheet-filter-actions {
   display: flex;
   gap: 8px;
+}
+
+.sheet-filter-range-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.sheet-filter-range-row input {
+  width: 76px;
+  min-width: 0;
+  text-align: center;
 }
 
 .color-header-btn {
