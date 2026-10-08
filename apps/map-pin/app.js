@@ -484,6 +484,13 @@ function persistGroups() {
   );
 }
 
+function migrateAllGroupRows() {
+  state.groups = (state.groups || []).map((group) => ({
+    ...group,
+    rows: cloneRows(group.rows),
+  }));
+}
+
 function applyCurrentGroup() {
   resetSheetFilters();
   const group = state.groups.find((item) => item.id === state.currentGroupId);
@@ -510,7 +517,9 @@ function loadState() {
       if (Array.isArray(parsed.progressOptions) && parsed.progressOptions.length) {
         applyProgressOptions(parsed.progressOptions);
       }
+      migrateAllGroupRows();
       applyCurrentGroup();
+      persistGroups();
       return;
     }
 
@@ -529,6 +538,7 @@ function loadState() {
             updatedAt: Date.now(),
           },
         ];
+        migrateAllGroupRows();
         persistGroups();
         applyCurrentGroup();
         return;
@@ -559,6 +569,7 @@ function loadState() {
           updatedAt: Date.now(),
         },
       ];
+      migrateAllGroupRows();
       persistGroups();
       applyCurrentGroup();
       return;
@@ -627,6 +638,7 @@ function cloudHeaders() {
 }
 
 function applySyncedGroups() {
+  migrateAllGroupRows();
   applyCurrentGroup();
   persistGroups();
   if (els.mapName) els.mapName.value = state.mapName;
