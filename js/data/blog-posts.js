@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'online-casino-crime',
+    title: 'オンカジは犯罪です',
+    date: '2026-10-08',
+    excerpt:
+      '日本国内からのオンラインカジノ（オンカジ）利用は犯罪になる可能性があります。手軽さへの注意と、海外カジノ旅行という選択肢について考えます。',
+    href: 'blog/online-casino-crime.html',
+    category: '考察',
+  },
+  {
     id: 'room-discovery-release',
     title: '新規入居部屋発見アプリをリリースしました！',
     date: '2026-09-24',
