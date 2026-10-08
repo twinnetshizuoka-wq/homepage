@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 const QUOTA_PATH = path.join(os.tmpdir(), "mymap-pin-quota.json");
-const DAILY_QUOTA_LIMIT = Number(process.env.DAILY_QUOTA_LIMIT || 40000);
+const DAILY_QUOTA_LIMIT = Number(process.env.DAILY_QUOTA_LIMIT || 20000);
 const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || "";
 const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || "";
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN || "";

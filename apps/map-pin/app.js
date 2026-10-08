@@ -2295,7 +2295,7 @@ function showQuotaDialog() {
 function renderQuota(data) {
   if (!els.quotaCount) return data;
   const count = Number(data?.count) || 0;
-  const limit = Number(data?.limit) || 40000;
+  const limit = Number(data?.limit) || 20000;
   const blocked = Boolean(data?.blocked) || count >= limit;
   els.quotaCount.textContent = `本日のピン上限 ${count}/${limit}本`;
   if (els.quotaLimitNote) els.quotaLimitNote.hidden = !blocked;

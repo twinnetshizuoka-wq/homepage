@@ -55,8 +55,8 @@ export default async function handler(req, res) {
     quota = {
       date: new Date().toISOString().slice(0, 10),
       count: 0,
-      limit: 40000,
-      remaining: 40000,
+      limit: 20000,
+      remaining: 20000,
       blocked: false,
       consumed: 1,
     };
