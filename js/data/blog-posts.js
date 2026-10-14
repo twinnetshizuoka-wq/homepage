@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'iphone-for-beginners',
+    title: 'スマホに詳しくない人ほど「iPhone」がおすすめ！！',
+    date: '2026-10-14',
+    excerpt:
+      'Androidユーザーの視点から、スマホに詳しくない人や高齢者ほどiPhoneをおすすめする理由。怪しい広告やウイルス警告への注意点を紹介します。',
+    href: 'blog/iphone-for-beginners.html',
+    category: '考察',
+  },
+  {
     id: 'online-casino-crime',
     title: 'オンカジは犯罪です',
     date: '2026-10-08',
