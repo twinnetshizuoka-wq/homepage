@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'iphone-to-android-risks',
+    title: 'iPhoneからAndroidに変更すると起きること',
+    date: '2026-10-22',
+    excerpt:
+      'iPhoneからAndroidへ乗り換えた際に起きやすいトラブル。ウイルス検出を装う広告や止まらない広告アプリへの注意点を紹介します。',
+    href: 'blog/iphone-to-android-risks.html',
+    category: '考察',
+  },
+  {
     id: 'iphone-for-beginners',
     title: 'スマホに詳しくない人ほど「iPhone」がおすすめ！！',
     date: '2026-10-14',
