@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'lockpay-intro',
+    title: 'LockPay（ロックペイ）アプリの紹介',
+    date: '2026-10-24',
+    excerpt:
+      '予算を超えると買い物アプリをロックするLockPayの紹介。意志だけに頼らず「使えない環境」を作る節約の考え方を紹介します。',
+    href: 'blog/lockpay-intro.html',
+    category: 'アプリ紹介',
+  },
+  {
     id: 'iphone-to-android-risks',
     title: 'iPhoneからAndroidに変更すると起きること',
     date: '2026-10-22',
