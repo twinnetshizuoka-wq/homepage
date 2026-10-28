@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'child-sns-parent-responsibility',
+    title: '子どもの不祥事、親の責任はどこまで？',
+    date: '2026-10-28',
+    excerpt:
+      '子どもがSNSで不祥事を起こしたときの親の責任。刑事責任と民事上の監督義務、そして子どもに使わせる前に親が学ぶべきネットリテラシーを考えます。',
+    href: 'blog/child-sns-parent-responsibility.html',
+    category: '考察',
+  },
+  {
     id: 'lockpay-intro',
     title: 'LockPay（ロックペイ）アプリの紹介',
     date: '2026-10-24',
