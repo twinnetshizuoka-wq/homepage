@@ -1,5 +1,14 @@
 export const blogPosts = [
   {
+    id: 'room-discovery-update',
+    title: '新規入居部屋発見アプリの改善・アップデートのお知らせ',
+    date: '2026-11-13',
+    excerpt:
+      'アットホーム取得の不具合修正、物件名不明物件への対応、戸建て・新築物件の取得改善など、新規入居部屋発見アプリをアップデートしました。',
+    href: 'blog/room-discovery-update.html',
+    category: 'アプリ更新',
+  },
+  {
     id: 'child-sns-parent-responsibility',
     title: '子どもの不祥事、親の責任はどこまで？',
     date: '2026-10-28',
