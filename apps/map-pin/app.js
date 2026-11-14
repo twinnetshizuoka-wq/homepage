@@ -920,6 +920,16 @@ function locationLabel(row) {
   return locationQueries(row)[0] || row.address || row.propertyName || "";
 }
 
+function isDetailedAddress(address) {
+  const compact = withPrefecture(normalizePlaceQuery(address)).replace(/\s+/g, "");
+  if (!compact) return false;
+  const pref = (compact.match(/(.{1,4}[都道府県])/) || [])[1] || "";
+  const rest = pref ? compact.slice(pref.length) : compact;
+  const city = (rest.match(/(.+?[市区町村])/) || [])[1] || "";
+  const afterCity = city ? rest.slice(city.length) : rest;
+  return afterCity.length >= 2;
+}
+
 function filledRows() {
   return state.rows.filter(
     (row) =>
@@ -2398,6 +2408,9 @@ async function locateRow(row) {
       const found = await geocodeAddress(query, "place");
       if (found) return found;
     }
+  }
+  if (name && getLocationMode() === "address-and-name" && !isDetailedAddress(address)) {
+    return null;
   }
   const addressQueries = [];
   if (address) addressQueries.push(address);

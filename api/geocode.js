@@ -71,6 +71,17 @@ function nameMatches(featureName, placeName) {
   return token.length >= 6 && name.length >= 6 && token.includes(name);
 }
 
+function featurePlaceText(feature) {
+  return [
+    feature?.Name,
+    feature?.Property?.Address,
+    feature?.Property?.Building?.Name,
+    feature?.Property?.Query,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function pickNamedPlace(features, query) {
   const parsed = parsePlaceQuery(query);
   const placeName = parsed.name;
@@ -79,10 +90,12 @@ function pickNamedPlace(features, query) {
   let bestScore = 0;
   features.forEach((feature) => {
     if (!inSameCity(feature, parsed.city)) return;
-    if (!nameMatches(feature?.Name, placeName)) return;
+    const blob = featurePlaceText(feature);
+    if (!nameMatches(blob, placeName) && !nameMatches(feature?.Name, placeName)) return;
     const name = normalizeQuery(feature?.Name);
     let score = 10;
     if (name === normalizeQuery(placeName)) score += 5;
+    if (nameMatches(feature?.Name, placeName)) score += 4;
     if (parsed.city && inSameCity(feature, parsed.city)) score += 3;
     if (score > bestScore) {
       best = feature;
@@ -125,14 +138,30 @@ async function searchLocal(appId, query) {
 
 async function searchContents(appId, query) {
   const parsed = parsePlaceQuery(query);
-  const url = new URL("https://map.yahooapis.jp/geocode/cont/V1/contentsGeoCoder");
-  url.searchParams.set("appid", appId);
-  url.searchParams.set("query", parsed.name ? `${parsed.city || ""}${parsed.name}` : query);
-  url.searchParams.set("category", "landmark");
-  url.searchParams.set("output", "json");
-  url.searchParams.set("results", "10");
-  const data = await yahooJson(url);
-  return data ? pickNamedPlace(featureList(data), query) : null;
+  const queries = [...new Set([
+    parsed.name,
+    parsed.city && parsed.name ? `${parsed.city} ${parsed.name}` : "",
+    parsed.city && parsed.name ? `${parsed.city}${parsed.name}` : "",
+    query,
+  ].filter(Boolean))];
+  for (const q of queries) {
+    for (const category of ["landmark", "address"]) {
+      const url = new URL("https://map.yahooapis.jp/geocode/cont/V1/contentsGeoCoder");
+      url.searchParams.set("appid", appId);
+      url.searchParams.set("query", q);
+      url.searchParams.set("category", category);
+      url.searchParams.set("output", "json");
+      url.searchParams.set("results", "10");
+      try {
+        const data = await yahooJson(url);
+        const found = data ? pickNamedPlace(featureList(data), query) : null;
+        if (found) return found;
+      } catch {
+        // try the next query
+      }
+    }
+  }
+  return null;
 }
 
 async function geocodeAddressYahoo(appId, query) {
