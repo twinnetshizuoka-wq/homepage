@@ -136,7 +136,7 @@
             <strong>注意：</strong>ピンのグループは <strong>1グループあたり最大 1000件</strong> までです。1000件を超える場合は、データを分けて別グループへ登録してください。
           </p>
           <p class="notice">
-            <strong>ピンの位置について：</strong>登録時に「住所のみ」か「住所と物件名」を選べます。物件名があれば、<strong>県・市・字</strong>だけでもある程度ピンが刺さります。番地までなくても、位置情報に物件名を含めて登録してください。
+            <strong>ピンの位置について：</strong>登録時に「住所のみ」か「住所と物件名」を選べます。「住所と物件名」では、市＋物件名で施設検索してから住所検索します。latitude と longitude が入っている行は、その座標でピンを刺します。
           </p>
 
           <div class="sheet-toolbar">
@@ -216,6 +216,18 @@
                     </div>
                   </th>
                   <th>備考</th>
+                  <th class="col-coord">
+                    <div class="th-with-filter">
+                      <span>latitude<br />（緯度）</span>
+                      <button type="button" class="sheet-filter-btn" data-filter-field="latitude" title="latitudeで絞り込み" aria-label="latitudeで絞り込み">▼</button>
+                    </div>
+                  </th>
+                  <th class="col-coord">
+                    <div class="th-with-filter">
+                      <span>longitude<br />（経度）</span>
+                      <button type="button" class="sheet-filter-btn" data-filter-field="longitude" title="longitudeで絞り込み" aria-label="longitudeで絞り込み">▼</button>
+                    </div>
+                  </th>
                   <th class="col-action"></th>
                 </tr>
               </thead>
@@ -223,7 +235,7 @@
             </table>
           </div>
           <p class="fine">
-            見出しの ▼ で番号・色・住所・物件名・担当者・商品・進捗を絞り込めます。番号は「開始～終了」で指定し、終了を空にすると最後まで表示します。非表示の行は地図からも消えます。Excel のセル範囲をコピーし、表の先頭セルに貼り付けると複数行をまとめて追加できます。行番号を押すと、そのピンに地図が寄ります。
+            見出しの ▼ で番号・色・住所・物件名・担当者・商品・進捗・座標を絞り込めます。番号は「開始～終了」で指定し、終了を空にすると最後まで表示します。latitude と longitude があれば、その座標でピンを刺します。非表示の行は地図からも消えます。Excel のセル範囲をコピーし、表の先頭セルに貼り付けると複数行をまとめて追加できます。行番号を押すと、そのピンに地図が寄ります。
           </p>
         </div>
 

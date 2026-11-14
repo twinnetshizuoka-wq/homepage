@@ -514,6 +514,23 @@ textarea {
   width: 92px;
 }
 
+.col-coord {
+  width: 118px;
+}
+
+.sheet .col-coord input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: calc(1.45em * 2 + 16px);
+  border: 0;
+  border-radius: 0;
+  padding: 8px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+}
+
 .sheet .col-num,
 .sheet .col-action,
 .sheet .col-color,

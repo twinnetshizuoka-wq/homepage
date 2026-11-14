@@ -12,7 +12,7 @@ const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file https://www.goog
 const DRIVE_DATA_NAME = "mymap-pin-app-data.json";
 const DRIVE_DATA_ID_KEY = "mymap-pin-app:drive-data-id";
 const LAYER_LIMIT = 1000;
-const SHEET_FIELDS = ["address", "propertyName", "companyRep", "clientRep", "product", "note"];
+const SHEET_FIELDS = ["address", "propertyName", "companyRep", "clientRep", "product", "note", "latitude", "longitude"];
 const DEFAULT_PIN_COLOR = "#e03131";
 const PIN_COLOR_PRESETS = [
   ["赤", "#e03131"],
@@ -174,8 +174,28 @@ function toast(message, ms = 2800) {
 
 function parseCoord(value) {
   if (value == null || String(value).trim() === "") return null;
-  const number = Number(value);
+  const number = Number(String(value).trim().replace(/[，、]/g, "."));
   return Number.isFinite(number) ? number : null;
+}
+
+function assignSheetField(row, field, value) {
+  if (field === "progress") {
+    row.progress = normalizeProgress(value);
+    return;
+  }
+  if (field === "latitude") {
+    row.lat = parseCoord(value);
+    return;
+  }
+  if (field === "longitude") {
+    row.lng = parseCoord(value);
+    return;
+  }
+  row[field] = value;
+  if (field === "address") {
+    row.lat = null;
+    row.lng = null;
+  }
 }
 
 function isValidLatLng(lat, lng) {
@@ -901,10 +921,15 @@ function locationLabel(row) {
 }
 
 function filledRows() {
-  return state.rows.filter((row) => row.address.trim() || row.propertyName.trim());
+  return state.rows.filter(
+    (row) =>
+      row.address.trim() ||
+      row.propertyName.trim() ||
+      (isValidLatLng(row.lat, row.lng) && isInJapan(row.lat, row.lng))
+  );
 }
 
-const SHEET_FILTER_FIELDS = ["pinColor", "address", "propertyName", "companyRep", "clientRep", "product", "progress"];
+const SHEET_FILTER_FIELDS = ["pinColor", "address", "propertyName", "companyRep", "clientRep", "product", "progress", "latitude", "longitude"];
 let sheetFilterField = "";
 let sheetFilterDraft = new Set();
 
@@ -952,9 +977,15 @@ function applyRowNumberFilterFromMenu(closeMenu = false) {
   applySheetFilter();
 }
 
+function formatCoord(value) {
+  return Number.isFinite(value) ? String(value) : "";
+}
+
 function filterFieldValue(row, key) {
   if (key === "pinColor") return sanitizePinColor(row.pinColor);
   if (key === "progress") return normalizeProgress(row.progress);
+  if (key === "latitude") return formatCoord(row.lat);
+  if (key === "longitude") return formatCoord(row.lng);
   return String(row?.[key] || "").trim();
 }
 
@@ -1415,25 +1446,30 @@ function renderSheet() {
         <select data-field="progress" aria-label="進捗">${progressOptionsHtml(row.progress)}</select>
       </td>
       <td><textarea data-field="note" rows="2">${escapeHtml(row.note)}</textarea></td>
+      <td class="col-coord"><input data-field="latitude" inputmode="decimal" value="${escapeAttr(formatCoord(row.lat))}" placeholder="35.179" aria-label="latitude" /></td>
+      <td class="col-coord"><input data-field="longitude" inputmode="decimal" value="${escapeAttr(formatCoord(row.lng))}" placeholder="138.661" aria-label="longitude" /></td>
       <td class="col-action">
         <button type="button" class="btn compact" data-nav title="地図でナビ">ナビ</button>
         <button type="button" class="btn danger" data-delete>削除</button>
       </td>
     `;
-    tr.querySelectorAll("textarea").forEach((input) => {
+    tr.querySelectorAll("textarea, input[data-field]").forEach((input) => {
       input.addEventListener("input", () => {
         if (looksLikeSpreadsheet(input.value) && applyExcelPaste(index, input.dataset.field, input.value)) {
           return;
         }
-        row[input.dataset.field] = input.value;
+        assignSheetField(row, input.dataset.field, input.value);
         if (input.dataset.field === "address") {
-          row.lat = null;
-          row.lng = null;
+          tr.querySelector("[data-field=latitude]").value = "";
+          tr.querySelector("[data-field=longitude]").value = "";
         }
         saveState();
         updateRowCount();
       });
-      input.addEventListener("blur", () => applySheetFilter());
+      input.addEventListener("blur", () => {
+        applySheetFilter();
+        if (input.dataset.field === "latitude" || input.dataset.field === "longitude") syncMarkers();
+      });
       input.addEventListener("keydown", (event) => {
         if (event.key === "Enter") event.preventDefault();
       });
@@ -1519,7 +1555,7 @@ function escapeCsv(value) {
 
 function isHeaderRow(cells) {
   const text = cells.join("");
-  return ["住所", "物件名", "自社担当", "取引担当", "商品", "進捗", "備考", "address", "name"].some((label) =>
+  return ["住所", "物件名", "自社担当", "取引担当", "商品", "進捗", "備考", "address", "name", "latitude", "longitude", "緯度", "経度"].some((label) =>
     text.includes(label)
   );
 }
@@ -1630,11 +1666,7 @@ function applyExcelPaste(startRowIndex, startField, text) {
     cells.forEach((value, colOffset) => {
       const field = pasteFields[startCol + colOffset];
       if (!field) return;
-      row[field] = field === "progress" ? normalizeProgress(value) : value;
-      if (field === "address") {
-        row.lat = null;
-        row.lng = null;
-      }
+      assignSheetField(row, field, value);
     });
   });
 
@@ -2265,11 +2297,11 @@ function asGeoResult(lat, lng, formatted) {
   return { lat: latitude, lng: longitude, formatted: formatted || "" };
 }
 
-async function geocodeWithYahoo(query) {
+async function geocodeWithYahoo(query, mode = "auto") {
   const res = await fetch("/api/geocode", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, mode }),
   });
   const data = await res.json().catch(() => ({}));
   applyQuotaPayload(data);
@@ -2331,21 +2363,50 @@ async function isQuotaBlocked() {
   }
 }
 
-async function geocodeAddress(address) {
+async function geocodeAddress(address, mode = "auto") {
   const query = normalizePlaceQuery(address);
   if (!query) return null;
-  if (geocodeCache.has(query)) return geocodeCache.get(query);
+  const cacheKey = `${mode}:${query}`;
+  if (geocodeCache.has(cacheKey)) return geocodeCache.get(cacheKey);
 
   let found = null;
   try {
-    found = await geocodeWithYahoo(query);
+    found = await geocodeWithYahoo(query, mode);
   } catch (err) {
     if (err instanceof QuotaExceededError) throw err;
     throw new QuotaExceededError();
   }
 
-  if (found) geocodeCache.set(query, found);
+  if (found) geocodeCache.set(cacheKey, found);
   return found;
+}
+
+async function locateRow(row) {
+  if (isValidLatLng(row.lat, row.lng) && isInJapan(row.lat, row.lng)) {
+    return { lat: row.lat, lng: row.lng };
+  }
+  const address = withPrefecture(normalizePlaceQuery(row.address));
+  const name = normalizePlaceQuery(row.propertyName);
+  const district = untilStreetNumber(address);
+  const unique = (values) => [...new Set(values.filter(Boolean))];
+  if (getLocationMode() === "address-and-name" && name) {
+    const placeQueries = [];
+    if (address) placeQueries.push(`${address} ${name}`);
+    if (district && district !== address) placeQueries.push(`${district} ${name}`);
+    placeQueries.push(name);
+    for (const query of unique(placeQueries)) {
+      const found = await geocodeAddress(query, "place");
+      if (found) return found;
+    }
+  }
+  const addressQueries = [];
+  if (address) addressQueries.push(address);
+  if (district && district !== address) addressQueries.push(district);
+  for (const query of unique(addressQueries)) {
+    const found = await geocodeAddress(query, "address");
+    if (found) return found;
+  }
+  return null;
 }
 
 async function reverseGeocode(lat, lng) {
@@ -2367,7 +2428,7 @@ async function reverseGeocode(lat, lng) {
 }
 
 function toCsv() {
-  const header = ["名前", "位置", "住所", "物件名", "自社担当者", "取引担当者", "商品", "進捗", "備考", "ピン色", "緯度", "経度"];
+  const header = ["名前", "位置", "住所", "物件名", "自社担当者", "取引担当者", "商品", "進捗", "備考", "ピン色", "latitude", "longitude"];
   const rows = filledRows().map((row) =>
     [
       row.propertyName || row.address,
@@ -2429,8 +2490,8 @@ function parseCsv(text) {
   const progressIdx = index(["進捗"]);
   const noteIdx = index(["備考", "説明"]);
   const colorIdx = index(["ピン色", "色"]);
-  const latIdx = index(["緯度", "lat"]);
-  const lngIdx = index(["経度", "lng", "lon"]);
+  const latIdx = index(["latitude", "緯度", "lat"]);
+  const lngIdx = index(["longitude", "経度", "lng", "lon"]);
   return lines.slice(1).map((line) => {
     const cells = splitCsvLine(line);
     const lat = parseCoord(cells[latIdx]);
@@ -2493,12 +2554,7 @@ async function geocodeFilledRows() {
     }
     row.lat = null;
     row.lng = null;
-    const queries = locationQueries(row);
-    let found = null;
-    for (const query of queries) {
-      found = await geocodeAddress(query);
-      if (found) break;
-    }
+    const found = await locateRow(row);
     if (found && isValidLatLng(found.lat, found.lng)) {
       row.lat = found.lat;
       row.lng = found.lng;
@@ -2566,7 +2622,7 @@ function authHeaders() {
 async function upsertSpreadsheet(rows) {
   const title = state.mapName;
   const values = [
-    ["名前", "位置", "住所", "物件名", "自社担当者", "取引担当者", "商品", "進捗", "備考", "ピン色", "緯度", "経度"],
+    ["名前", "位置", "住所", "物件名", "自社担当者", "取引担当者", "商品", "進捗", "備考", "ピン色", "latitude", "longitude"],
     ...rows.map((row) => [
       row.propertyName || row.address,
       locationLabel(row),
