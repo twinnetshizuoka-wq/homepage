@@ -39,22 +39,52 @@ function normalizeQuery(text) {
     .toLowerCase();
 }
 
+function parsePlaceQuery(query) {
+  const raw = String(query || "").trim();
+  const compact = raw.replace(/\s+/g, "");
+  const prefecture = (compact.match(/(.{1,4}[都道府県])/) || [])[1] || "";
+  const afterPref = prefecture ? compact.slice(prefecture.length) : compact;
+  const city = (afterPref.match(/(.+?[市区町村])/) || [])[1] || "";
+  const afterCity = city ? afterPref.slice(city.length) : afterPref;
+  const spaced = raw.split(/\s+/).filter(Boolean);
+  const nameFromSpaced = spaced
+    .filter((token) => !/[都道府県市区町村]$/.test(token) && token !== `${prefecture}${city}`)
+    .pop();
+  const name = nameFromSpaced || afterCity;
+  return { raw, prefecture, city, name };
+}
+
+function inSameCity(feature, city) {
+  if (!city) return true;
+  const address = normalizeQuery(feature?.Property?.Address || "");
+  const hint = normalizeQuery(city);
+  if (!hint) return true;
+  if (!address) return false;
+  return address.includes(hint);
+}
+
+function nameMatches(featureName, placeName) {
+  const name = normalizeQuery(featureName).replace(/\s+/g, "");
+  const token = normalizeQuery(placeName).replace(/\s+/g, "");
+  if (!name || !token) return false;
+  if (name.includes(token)) return true;
+  return token.length >= 6 && name.length >= 6 && token.includes(name);
+}
+
 function pickNamedPlace(features, query) {
-  const q = normalizeQuery(query);
-  const tokens = q.split(" ").filter((token) => token.length >= 2);
-  const nameToken = tokens[tokens.length - 1] || "";
-  if (!nameToken) return null;
+  const parsed = parsePlaceQuery(query);
+  const placeName = parsed.name;
+  if (!placeName) return null;
   let best = null;
   let bestScore = 0;
   features.forEach((feature) => {
+    if (!inSameCity(feature, parsed.city)) return;
+    if (!nameMatches(feature?.Name, placeName)) return;
     const name = normalizeQuery(feature?.Name);
-    if (!name) return;
-    let score = 0;
-    if (name.includes(nameToken) || nameToken.includes(name)) score += 10;
-    tokens.forEach((token) => {
-      if (name.includes(token)) score += 1;
-    });
-    if (score >= 10 && score > bestScore) {
+    let score = 10;
+    if (name === normalizeQuery(placeName)) score += 5;
+    if (parsed.city && inSameCity(feature, parsed.city)) score += 3;
+    if (score > bestScore) {
       best = feature;
       bestScore = score;
     }
@@ -82,23 +112,25 @@ async function yahooJson(url) {
 }
 
 async function searchLocal(appId, query) {
+  const parsed = parsePlaceQuery(query);
   const url = new URL("https://map.yahooapis.jp/search/local/V1/localSearch");
   url.searchParams.set("appid", appId);
-  url.searchParams.set("query", query);
+  url.searchParams.set("query", parsed.name || query);
   url.searchParams.set("output", "json");
-  url.searchParams.set("results", "5");
+  url.searchParams.set("results", "20");
   url.searchParams.set("sort", "match");
   const data = await yahooJson(url);
   return data ? pickNamedPlace(featureList(data), query) : null;
 }
 
 async function searchContents(appId, query) {
+  const parsed = parsePlaceQuery(query);
   const url = new URL("https://map.yahooapis.jp/geocode/cont/V1/contentsGeoCoder");
   url.searchParams.set("appid", appId);
-  url.searchParams.set("query", query);
+  url.searchParams.set("query", parsed.name ? `${parsed.city || ""}${parsed.name}` : query);
   url.searchParams.set("category", "landmark");
   url.searchParams.set("output", "json");
-  url.searchParams.set("results", "5");
+  url.searchParams.set("results", "10");
   const data = await yahooJson(url);
   return data ? pickNamedPlace(featureList(data), query) : null;
 }

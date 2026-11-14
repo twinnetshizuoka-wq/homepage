@@ -2393,7 +2393,7 @@ async function locateRow(row) {
     const placeQueries = [];
     if (address) placeQueries.push(`${address} ${name}`);
     if (district && district !== address) placeQueries.push(`${district} ${name}`);
-    placeQueries.push(name);
+    if (!address) placeQueries.push(name);
     for (const query of unique(placeQueries)) {
       const found = await geocodeAddress(query, "place");
       if (found) return found;
